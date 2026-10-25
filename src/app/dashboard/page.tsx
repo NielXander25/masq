@@ -59,7 +59,8 @@ export default async function DashboardPage() {
         </div>
       </header>
       <p className="mt-2 text-sm text-neutral-400">
-        Signed in as <span className="text-white">{user.email}</span> · {user.plan} plan
+        Signed in as <span className="text-white">{user.email}</span> ·{" "}
+        {user.role === "ADMIN" ? "Admin (all features)" : `${user.plan} plan`}
       </p>
 
       <div className="mt-8">

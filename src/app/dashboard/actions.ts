@@ -34,7 +34,7 @@ export async function createCall(
   // Plan comes from the database, never from the client.
   const user = await db.user.findUniqueOrThrow({
     where: { id: sessionUser.id },
-    select: { id: true, plan: true },
+    select: { id: true, plan: true, role: true },
   });
 
   const parsed = createCallSchema.safeParse({

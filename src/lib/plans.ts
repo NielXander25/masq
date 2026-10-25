@@ -1,4 +1,4 @@
-import type { Plan } from "@prisma/client";
+import type { Plan, Role } from "@prisma/client";
 
 // All plan gating lives here. Always pass a user loaded on the server.
 
@@ -15,10 +15,13 @@ const MAX_PARTICIPANTS: Record<Plan, number | null> = {
   PRO: null,
 };
 
-export function canUse(feature: Feature, user: { plan: Plan }) {
-  return FEATURES[user.plan].has(feature);
+type PlanUser = { plan: Plan; role?: Role };
+
+/** Admins get every feature, whatever their plan. */
+export function canUse(feature: Feature, user: PlanUser) {
+  return user.role === "ADMIN" || FEATURES[user.plan].has(feature);
 }
 
-export function maxParticipants(user: { plan: Plan }) {
+export function maxParticipants(user: PlanUser) {
   return canUse("UNLIMITED_PARTICIPANTS", user) ? null : MAX_PARTICIPANTS[user.plan];
 }

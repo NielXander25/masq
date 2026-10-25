@@ -19,7 +19,7 @@ export async function rejoinCall(input: unknown): Promise<RejoinResult> {
 
   const participant = await db.participant.findUnique({
     where: { callId_userId: { callId, userId: user.id } },
-    select: { id: true, isHost: true, status: true, call: { select: { status: true, host: { select: { plan: true } } } } },
+    select: { id: true, isHost: true, status: true, call: { select: { status: true, host: { select: { plan: true, role: true } } } } },
   });
   if (!participant) return { ok: false, error: "You're not part of this call" };
   if (participant.call.status === "ENDED") return { ok: false, error: "This call has ended" };

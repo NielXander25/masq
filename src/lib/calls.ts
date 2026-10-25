@@ -8,7 +8,7 @@ export function findHostedCall(callId: string, userId: string) {
       id: true,
       roomName: true,
       status: true,
-      host: { select: { plan: true } },
+      host: { select: { plan: true, role: true } },
     },
   });
 }
