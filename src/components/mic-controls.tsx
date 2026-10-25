@@ -7,10 +7,36 @@ import { PRESET_LABELS, VOICE_PRESETS, isVoicePreset } from "@/lib/voice/presets
 import { useMicStore } from "@/lib/voice/store";
 
 /**
- * Publishes the processed microphone track (disguised and/or noise-suppressed)
- * and owns muting. LiveKit is never asked to open the raw microphone.
+ * Mute button. With `disguise`, it also publishes the disguised track itself so
+ * LiveKit is never asked to open the raw microphone. Otherwise LiveKit captures
+ * the mic natively (best echo cancellation) and this just toggles it.
  */
-export function MicButton() {
+export function MicButton({ disguise }: { disguise: boolean }) {
+  return disguise ? <DisguisedMicButton /> : <NativeMicButton />;
+}
+
+function NativeMicButton() {
+  const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
+  const state = useConnectionState();
+  const [busy, setBusy] = useState(false);
+  const muted = !isMicrophoneEnabled;
+  return (
+    <MuteToggle
+      muted={muted}
+      disabled={busy || state !== ConnectionState.Connected}
+      onToggle={async () => {
+        setBusy(true);
+        try {
+          await localParticipant.setMicrophoneEnabled(muted);
+        } finally {
+          setBusy(false);
+        }
+      }}
+    />
+  );
+}
+
+function DisguisedMicButton() {
   const room = useRoomContext();
   const state = useConnectionState();
   const track = useMicStore((s) => s.track);
@@ -50,10 +76,14 @@ export function MicButton() {
 
   if (error) return <span className="text-sm text-red-400">Microphone not sent: {error}</span>;
 
+  return <MuteToggle muted={muted} disabled={!published} onToggle={toggle} />;
+}
+
+function MuteToggle({ muted, disabled, onToggle }: { muted: boolean; disabled: boolean; onToggle: () => void }) {
   return (
     <button
-      onClick={toggle}
-      disabled={!published}
+      onClick={onToggle}
+      disabled={disabled}
       aria-pressed={muted}
       aria-label={muted ? "Unmute microphone" : "Mute microphone"}
       className={`lk-button flex items-center gap-2 ${muted ? "!bg-red-600 !text-white" : ""}`}

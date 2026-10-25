@@ -120,7 +120,7 @@ export function PreJoin({ alias, title, isHost, disguise, cameraRequired = false
       <section className="space-y-3 rounded-xl border border-neutral-800 p-4">
         <div className="flex items-center justify-between">
           <h2 className="font-medium">{disguise ? "Your disguised voice" : "Microphone"}</h2>
-          <span className="text-xs text-neutral-500">Noise reduction on</span>
+          <span className="text-xs text-neutral-500">{disguise ? "Noise reduction on" : "Echo & noise cancelling on"}</span>
         </div>
 
         {disguise && (

@@ -60,8 +60,8 @@ export function CallRoom({
   const [conn, setConn] = useState<{ token: string; serverUrl: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Everyone's microphone goes through the processor (noise reduction, plus the
-  // disguise for the host). Release it when leaving the page.
+  // The pre-join screen runs the mic through the processor (for "Hear myself").
+  // Only a disguised host keeps it in the call; release it when leaving.
   useEffect(() => {
     useMicStore.getState().setMode(voicePreset ?? "clean");
     return () => useMicStore.getState().release();
@@ -117,6 +117,8 @@ export function CallRoom({
         disguise={voiceOn}
         cameraRequired={cameraRequired}
         onJoin={({ camera }) => {
+          // Without a disguise, hand the mic to LiveKit (standard WebRTC path).
+          if (!voiceOn) useMicStore.getState().release();
           setCameraOn(camera);
           setPhase("connecting");
         }}
@@ -182,9 +184,10 @@ export function CallRoom({
           token={conn.token}
           serverUrl={conn.serverUrl}
           connect
-          // LiveKit never opens the real microphone: MicButton publishes the
-          // processed (noise-reduced, and for the host disguised) track instead.
-          audio={false}
+          // Disguised host: LiveKit never opens the real microphone; MicButton
+          // publishes the disguised track. Everyone else: LiveKit's native mic,
+          // with the browser's echo cancellation and noise suppression.
+          audio={voiceOn ? false : { echoCancellation: true, noiseSuppression: true, autoGainControl: true }}
           video={!isHost && cameraOn}
           // The host's media only ever goes through TURN, so guests never see their IP.
           connectOptions={isHost ? { rtcConfig: { iceTransportPolicy: "relay" } } : undefined}
@@ -198,7 +201,7 @@ export function CallRoom({
           <Stage />
           <RoomAudioRenderer />
           <div className="flex flex-wrap items-center justify-center gap-2 border-t border-neutral-800 p-2">
-            <MicButton />
+            <MicButton disguise={voiceOn} />
             <ControlBar
               className="!border-0 !p-0"
               controls={{
