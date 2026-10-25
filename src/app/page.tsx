@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { auth } from "@/auth";
+import { LogoMark } from "@/components/logo";
 
 export default async function Home() {
   const session = await auth();
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-6 px-4">
-      <h1 className="text-5xl font-semibold tracking-tight">Masq</h1>
+      <h1 className="flex items-center gap-3 text-5xl font-semibold tracking-tight">
+        <LogoMark className="h-14 w-14" />
+        Masq
+      </h1>
       <p className="text-lg text-neutral-400">
         Host voice and video calls under any name, with a disguised voice. Every
         guest signs in with Google, so you always know who you&apos;re talking to.

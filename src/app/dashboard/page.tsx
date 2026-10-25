@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SignOutButton } from "@/components/auth-buttons";
 import { ShareButton } from "@/components/copy-button";
+import { Logo } from "@/components/logo";
 import { NewCallForm } from "@/components/new-call-form";
 import { db } from "@/lib/db";
 import { inviteUrl } from "@/lib/invite";
@@ -32,7 +33,9 @@ export default async function DashboardPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <header className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <Link href="/dashboard" aria-label="Masq dashboard">
+          <Logo className="text-xl" />
+        </Link>
         <div className="flex items-center gap-3">
           {user.role === "ADMIN" && (
             <Link href="/admin" className="text-sm text-neutral-400 hover:text-white">
