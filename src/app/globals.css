@@ -17,3 +17,11 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
+
+/* Call tiles: make a muted microphone obvious. */
+.lk-track-muted-indicator-microphone[data-lk-muted="true"] {
+  color: #f87171;
+}
+.lk-track-muted-indicator-microphone[data-lk-muted="false"] {
+  color: #4ade80;
+}

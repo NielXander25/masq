@@ -2,22 +2,29 @@
 
 import "@livekit/components-styles";
 import {
+  ConnectionQualityIndicator,
   ControlBar,
-  GridLayout,
   LiveKitRoom,
+  ParticipantName,
+  ParticipantPlaceholder,
   ParticipantTile,
   RoomAudioRenderer,
+  ScreenShareIcon,
+  TrackMutedIndicator,
+  VideoTrack,
+  isTrackReference,
   useTracks,
+  type TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
 import { DisconnectReason, Track } from "livekit-client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ShareButton } from "@/components/copy-button";
-import { HostVoicePublisher, PresetSwitcher } from "@/components/host-voice";
 import { LobbyPanel } from "@/components/lobby-panel";
-import { VoicePreview } from "@/components/voice-preview";
+import { CameraRequiredGuard, MicButton, PresetSwitcher } from "@/components/mic-controls";
+import { PreJoin } from "@/components/prejoin";
 import type { VoicePreset } from "@/lib/voice/presets";
-import { useVoiceStore } from "@/lib/voice/store";
+import { useMicStore } from "@/lib/voice/store";
 
 type Props = {
   callId: string;
@@ -27,23 +34,23 @@ type Props = {
   inviteUrl?: string;
   /** Host only: disguise the voice with this preset. */
   voicePreset?: VoicePreset | null;
+  /** Guest only: the host requires cameras on. */
+  cameraRequired?: boolean;
 };
-type Phase = "preview" | "connecting" | "in-call" | "left" | "ended" | "error";
+type Phase = "prejoin" | "connecting" | "in-call" | "left" | "ended" | "error";
 
-export function CallRoom({ callId, isHost, alias, inviteUrl, voicePreset }: Props) {
+export function CallRoom({ callId, isHost, alias, inviteUrl, voicePreset, cameraRequired = false }: Props) {
   const voiceOn = isHost && Boolean(voicePreset);
-  const [phase, setPhase] = useState<Phase>(voiceOn ? "preview" : "connecting");
+  const [phase, setPhase] = useState<Phase>("prejoin");
+  const [cameraOn, setCameraOn] = useState(false);
   const [conn, setConn] = useState<{ token: string; serverUrl: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Seed the preset once, and release the microphone when leaving the page.
+  // Everyone's microphone goes through the processor (noise reduction, plus the
+  // disguise for the host). Release it when leaving the page.
   useEffect(() => {
-    if (voicePreset) useVoiceStore.getState().setPreset(voicePreset);
-    return () => {
-      const { processor, setProcessor } = useVoiceStore.getState();
-      processor?.stop();
-      setProcessor(null, null);
-    };
+    useMicStore.getState().setMode(voicePreset ?? "clean");
+    return () => useMicStore.getState().release();
   }, [voicePreset]);
 
   useEffect(() => {
@@ -85,7 +92,20 @@ export function CallRoom({ callId, isHost, alias, inviteUrl, voicePreset }: Prop
     if (reason === DisconnectReason.PARTICIPANT_REMOVED) return setPhase("left");
   }
 
-  if (phase === "preview") return <VoicePreview alias={alias} onJoin={() => setPhase("connecting")} />;
+  if (phase === "prejoin") {
+    return (
+      <PreJoin
+        alias={alias}
+        isHost={isHost}
+        disguise={voiceOn}
+        cameraRequired={cameraRequired}
+        onJoin={({ camera }) => {
+          setCameraOn(camera);
+          setPhase("connecting");
+        }}
+      />
+    );
+  }
   if (phase === "ended") return <Message title="This call has ended." />;
   if (phase === "left") {
     return (
@@ -130,10 +150,10 @@ export function CallRoom({ callId, isHost, alias, inviteUrl, voicePreset }: Prop
           token={conn.token}
           serverUrl={conn.serverUrl}
           connect
-          // With the voice changer on, LiveKit never opens the real microphone:
-          // HostVoicePublisher publishes the disguised track instead.
-          audio={!voiceOn}
-          video={!isHost}
+          // LiveKit never opens the real microphone: MicButton publishes the
+          // processed (noise-reduced, and for the host disguised) track instead.
+          audio={false}
+          video={!isHost && cameraOn}
           // The host's media only ever goes through TURN, so guests never see their IP.
           connectOptions={isHost ? { rtcConfig: { iceTransportPolicy: "relay" } } : undefined}
           onDisconnected={onDisconnected}
@@ -142,18 +162,22 @@ export function CallRoom({ callId, isHost, alias, inviteUrl, voicePreset }: Prop
             setPhase("error");
           }}
         >
+          {cameraRequired && <CameraRequiredGuard />}
           <Stage />
           <RoomAudioRenderer />
-          {voiceOn && <HostVoicePublisher />}
-          <ControlBar
-            controls={{
-              microphone: !voiceOn,
-              camera: !isHost,
-              screenShare: !isHost,
-              chat: false,
-              leave: true,
-            }}
-          />
+          <div className="flex flex-wrap items-center justify-center gap-2 border-t border-neutral-800 p-2">
+            <MicButton />
+            <ControlBar
+              className="!border-0 !p-0"
+              controls={{
+                microphone: false,
+                camera: !isHost && !cameraRequired,
+                screenShare: !isHost,
+                chat: false,
+                leave: true,
+              }}
+            />
+          </div>
         </LiveKitRoom>
         {isHost && (
           <div className="max-h-[40vh] overflow-y-auto border-t border-neutral-800 md:max-h-none md:w-80 md:border-t-0">
@@ -178,6 +202,7 @@ function InviteLink({ url }: { url: string }) {
   );
 }
 
+/** Every participant on screen at once (no paging), stacked on narrow screens. */
 function Stage() {
   const tracks = useTracks(
     [
@@ -186,10 +211,53 @@ function Stage() {
     ],
     { onlySubscribed: false },
   );
+  const n = tracks.length;
+  const cols =
+    n <= 1
+      ? "grid-cols-1"
+      : n === 2
+        ? "grid-cols-1 sm:grid-cols-2"
+        : n <= 4
+          ? "grid-cols-2"
+          : "grid-cols-2 md:grid-cols-3";
   return (
-    <GridLayout tracks={tracks} className="min-h-0 flex-1">
-      <ParticipantTile />
-    </GridLayout>
+    <div className={`grid min-h-0 flex-1 auto-rows-fr gap-2 overflow-y-auto p-2 ${cols}`}>
+      {tracks.map((t) => (
+        <CallTile key={`${t.participant.identity}:${t.source}`} trackRef={t} />
+      ))}
+    </div>
+  );
+}
+
+/** LiveKit's tile, but the mic icon is always shown: on, or red when muted. */
+function CallTile({ trackRef }: { trackRef: TrackReferenceOrPlaceholder }) {
+  const isCamera = trackRef.source === Track.Source.Camera;
+  return (
+    <ParticipantTile trackRef={trackRef} className="min-h-[140px]">
+      {isTrackReference(trackRef) && <VideoTrack trackRef={trackRef} />}
+      <div className="lk-participant-placeholder">
+        <ParticipantPlaceholder />
+      </div>
+      <div className="lk-participant-metadata">
+        <div className="lk-participant-metadata-item">
+          {isCamera ? (
+            <>
+              <TrackMutedIndicator
+                trackRef={{ participant: trackRef.participant, source: Track.Source.Microphone }}
+                show="always"
+              />
+              <ParticipantName />
+            </>
+          ) : (
+            <>
+              <ScreenShareIcon style={{ marginRight: "0.25rem" }} />
+              <ParticipantName>&apos;s screen</ParticipantName>
+            </>
+          )}
+        </div>
+        <ConnectionQualityIndicator className="lk-participant-metadata-item" />
+      </div>
+    </ParticipantTile>
   );
 }
 
