@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminNav } from "@/components/admin-nav";
+import { SignOutButton } from "@/components/auth-buttons";
 import { Logo } from "@/components/logo";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
@@ -15,9 +16,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Logo className="text-lg" />
           <span className="rounded bg-amber-500 px-1.5 py-0.5 text-xs font-medium text-black">Admin</span>
         </Link>
-        <Link href="/dashboard" className="text-sm text-neutral-400 hover:text-white">
-          My dashboard
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard" className="text-sm text-neutral-400 hover:text-white">
+            My dashboard
+          </Link>
+          <SignOutButton />
+        </div>
       </header>
       <AdminNav openReports={openReports} />
       <div className="mt-6">{children}</div>
