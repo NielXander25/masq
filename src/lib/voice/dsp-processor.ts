@@ -24,6 +24,8 @@ export class DspVoiceProcessor implements VoiceProcessor {
       numberOfInputs: 1,
       numberOfOutputs: 1,
       outputChannelCount: [1],
+      // Settings apply from the very first sample, before any message arrives.
+      processorOptions: DSP_PRESETS[mode],
     });
     const dest = ctx.createMediaStreamDestination();
     source.connect(node).connect(dest);

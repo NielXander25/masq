@@ -26,6 +26,11 @@ export function MicButton() {
     room.localParticipant
       .publishTrack(track, { source: Track.Source.Microphone, name: "microphone" })
       .then((p) => {
+        const t = p.track;
+        if (t) {
+          t.restartTrack = async () => {};
+          t.setDeviceId = async () => true;
+        }
         pub.current = p;
         setPublished(true);
       })

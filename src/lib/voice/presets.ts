@@ -19,19 +19,21 @@ export type DspParams = {
   gain: number;
   /** Background noise suppression. */
   denoise: boolean;
+  /** Always run the vocoder: the real voice must never pass straight through. */
+  disguise: boolean;
 };
 
 /** A preset, or "clean": the real voice with only noise suppression applied. */
 export type VoiceMode = VoicePreset | "clean";
 
 export const DSP_PRESETS: Record<VoiceMode, DspParams> = {
-  clean: { pitch: 1, formant: 1, robot: false, gain: 1, denoise: true },
-  deep: { pitch: 0.72, formant: 0.82, robot: false, gain: 1, denoise: true },
-  high: { pitch: 1.45, formant: 1.2, robot: false, gain: 1.7, denoise: true },
-  robot: { pitch: 1, formant: 0.95, robot: true, gain: 4, denoise: true },
+  clean: { pitch: 1, formant: 1, robot: false, gain: 1, denoise: true, disguise: false },
+  deep: { pitch: 0.66, formant: 0.8, robot: false, gain: 1, denoise: true, disguise: true },
+  high: { pitch: 1.5, formant: 1.25, robot: false, gain: 1.7, denoise: true, disguise: true },
+  robot: { pitch: 1, formant: 0.92, robot: true, gain: 4, denoise: true, disguise: true },
   // Pitch down but formants up: keeps a natural sound while breaking the
   // pitch/formant pairing that listeners use to recognise a voice.
-  "neutral-mask": { pitch: 0.88, formant: 1.12, robot: false, gain: 1, denoise: true },
+  "neutral-mask": { pitch: 0.84, formant: 1.16, robot: false, gain: 1, denoise: true, disguise: true },
 };
 
 export function isVoicePreset(v: unknown): v is VoicePreset {

@@ -31,13 +31,16 @@ const GAIN_FLOOR = 0.08; // about -22 dB
 const WARMUP_FRAMES = 12;
 
 class VoiceShifter extends AudioWorkletProcessor {
-  constructor() {
+  constructor(options) {
     super();
     this.pitch = 1;
     this.formant = 1;
     this.robot = false;
     this.gain = 1;
     this.denoise = true;
+    // When true the vocoder is always used, even if pitch and formant are 1,
+    // so the real voice can never pass straight through.
+    this.disguise = false;
 
     this.inFifo = new Float32Array(N);
     this.outFifo = new Float32Array(N);
@@ -81,14 +84,20 @@ class VoiceShifter extends AudioWorkletProcessor {
     const binHz = sampleRate / N;
     this.envRadius = Math.max(2, Math.round(300 / binHz));
 
-    this.port.onmessage = (e) => {
-      const { pitch, formant, robot, gain, denoise } = e.data ?? {};
+    this.configure(options && options.processorOptions);
+    this.port.onmessage = (e) => this.configure(e.data);
+  }
+
+  configure(data) {
+    {
+      const { pitch, formant, robot, gain, denoise, disguise } = data ?? {};
       if (typeof pitch === "number" && pitch > 0.25 && pitch < 4) this.pitch = pitch;
       if (typeof formant === "number" && formant > 0.25 && formant < 4) this.formant = formant;
       if (typeof robot === "boolean") this.robot = robot;
       if (typeof gain === "number" && gain > 0 && gain < 8) this.gain = gain;
       if (typeof denoise === "boolean") this.denoise = denoise;
-    };
+      if (typeof disguise === "boolean") this.disguise = disguise;
+    }
   }
 
   // In-place iterative radix-2 FFT. sign = -1 forward, +1 inverse (unscaled).
@@ -178,7 +187,7 @@ class VoiceShifter extends AudioWorkletProcessor {
     this.fft(re, im, -1);
     if (this.denoise) this.updateNoiseGain();
 
-    if (this.pitch === 1 && this.formant === 1 && !this.robot) {
+    if (!this.disguise && this.pitch === 1 && this.formant === 1 && !this.robot) {
       // Clean voice: keep the original phases, apply only noise suppression.
       for (let k = 0; k <= HALF; k++) {
         const g = this.denoise ? nsGain[k] : 1;
