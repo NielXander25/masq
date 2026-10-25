@@ -4,7 +4,13 @@ import { useActionState, useState } from "react";
 import { createCall, type CreateCallState } from "@/app/dashboard/actions";
 import { PRESET_LABELS, VOICE_PRESETS } from "@/lib/voice/presets";
 
-export function NewCallForm({ canUseVoiceChanger }: { canUseVoiceChanger: boolean }) {
+export function NewCallForm({
+  canUseVoiceChanger,
+  canRecord,
+}: {
+  canUseVoiceChanger: boolean;
+  canRecord: boolean;
+}) {
   const [state, action, pending] = useActionState<CreateCallState, FormData>(createCall, {});
   const [voiceOn, setVoiceOn] = useState(false);
   const fe = state.fieldErrors ?? {};
@@ -80,9 +86,10 @@ export function NewCallForm({ canUseVoiceChanger }: { canUseVoiceChanger: boolea
         </div>
       </fieldset>
 
-      <label className="flex items-center gap-2">
-        <input type="checkbox" name="recordingEnabled" />
+      <label className={`flex items-center gap-2 ${canRecord ? "" : "opacity-50"}`}>
+        <input type="checkbox" name="recordingEnabled" disabled={!canRecord} />
         <span>Record and transcribe this call</span>
+        {!canRecord && <span className="text-xs text-neutral-500">(coming soon)</span>}
       </label>
 
       {state.error && <p className="text-sm text-red-400">{state.error}</p>}

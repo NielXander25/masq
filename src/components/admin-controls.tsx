@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { revealHost, setBanned, setPlan } from "@/app/admin/actions";
+import { openRecording, revealHost, setBanned, setPlan } from "@/app/admin/actions";
 
 export function RevealHost({ callId }: { callId: string }) {
   const [host, setHost] = useState<{ name: string | null; email: string } | null>(null);
@@ -91,6 +91,59 @@ export function UserActions({
         </button>
       )}
       {error && <span className="text-xs text-red-400">{error}</span>}
+    </div>
+  );
+}
+
+type Segment = { speakerLabel: string; startMs: number; text: string };
+
+export function RecordingAccess({ callId }: { callId: string }) {
+  const [data, setData] = useState<{ audioUrl: string | null; segments: Segment[] | null } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  if (!data) {
+    return (
+      <div className="space-y-1">
+        <button
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              try {
+                setData(await openRecording({ callId }));
+              } catch (e) {
+                setError((e as Error).message);
+              }
+            })
+          }
+          className="rounded-md border border-amber-700 px-3 py-1.5 text-sm text-amber-300 hover:bg-amber-950 disabled:opacity-50"
+          title="Opening is recorded in the audit log."
+        >
+          {pending ? "Opening…" : "Open recording and transcript"}
+        </button>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-4">
+      {data.audioUrl ? (
+        <audio controls src={data.audioUrl} className="w-full" />
+      ) : (
+        <p className="text-sm text-neutral-400">No finished recording.</p>
+      )}
+      {data.segments ? (
+        <ol className="space-y-2 text-sm">
+          {data.segments.map((s, i) => (
+            <li key={i}>
+              <span className="font-medium">{s.speakerLabel}</span>
+              <span className="text-neutral-300">: {s.text}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="text-sm text-neutral-400">No transcript.</p>
+      )}
     </div>
   );
 }

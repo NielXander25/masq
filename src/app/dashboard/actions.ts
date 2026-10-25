@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { aliasSchema, hostTitleSchema } from "@/lib/alias";
 import { randomId, shortCode } from "@/lib/ids";
 import { canUse } from "@/lib/plans";
+import { recordingConfigured } from "@/lib/recording";
 import { requireUser } from "@/lib/session";
 import { VOICE_PRESETS } from "@/lib/voice/presets";
 
@@ -48,6 +49,10 @@ export async function createCall(
     return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
   }
   const input = parsed.data;
+
+  if (input.recordingEnabled && !recordingConfigured()) {
+    return { error: "Recording isn't available yet." };
+  }
 
   if (input.voiceChangerEnabled && !canUse("VOICE_CHANGER", user)) {
     return { error: "The voice changer is a PRO feature." };

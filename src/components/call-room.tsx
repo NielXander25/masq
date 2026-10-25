@@ -33,6 +33,8 @@ type Props = {
   alias: string;
   /** Optional role shown to guests, e.g. "Interviewer". */
   title?: string | null;
+  /** Show everyone that the call is being recorded. */
+  recording?: boolean;
   /** Host only. */
   inviteUrl?: string;
   /** Host only: disguise the voice with this preset. */
@@ -47,6 +49,7 @@ export function CallRoom({
   isHost,
   alias,
   title,
+  recording = false,
   inviteUrl,
   voicePreset,
   cameraRequired = false,
@@ -144,7 +147,15 @@ export function CallRoom({
     <div className="flex h-dvh flex-col">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 px-4 py-3">
         <div className="min-w-0">
-          <div className="truncate font-medium">{alias}</div>
+          <div className="flex items-center gap-2">
+            <span className="truncate font-medium">{alias}</span>
+            {recording && (
+              <span className="flex shrink-0 items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-xs font-medium text-white">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                Recording
+              </span>
+            )}
+          </div>
           <div className="text-xs text-neutral-500">
             {isHost
               ? `You're hosting anonymously${title ? ` as ${title}` : ""}`

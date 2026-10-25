@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
+import { r2Configured, r2SignedUrl } from "@/lib/r2";
+import { readSegments } from "@/lib/transcribe/read";
 import { requireAdmin } from "@/lib/session";
 
 const id = z.string().min(1).max(64);
@@ -49,4 +51,31 @@ export async function setReportStatus(formData: FormData) {
   await db.report.update({ where: { id: reportId }, data: { status } });
   await audit(admin.id, "UPDATE_REPORT", "Report", reportId);
   revalidatePath("/admin", "layout");
+}
+
+/**
+ * Recording and transcript for an admin, only while the call has an open
+ * report. Both views are audit-logged.
+ */
+export async function openRecording(input: unknown) {
+  const admin = await requireAdmin();
+  const { callId } = z.object({ callId: id }).parse(input);
+  const call = await db.call.findUnique({
+    where: { id: callId },
+    select: {
+      reports: { where: { status: "OPEN" }, select: { id: true }, take: 1 },
+      recordings: { where: { kind: "MIXED", status: "DONE" }, select: { fileKey: true }, take: 1 },
+      transcript: { select: { status: true, segments: true } },
+    },
+  });
+  if (!call) throw new Error("Call not found");
+  if (!call.reports.length) throw new Error("Access requires an open report on this call");
+
+  const fileKey = call.recordings[0]?.fileKey;
+  const audioUrl = fileKey && r2Configured() ? r2SignedUrl(fileKey) : null;
+  if (audioUrl) await audit(admin.id, "VIEW_RECORDING", "Call", callId);
+  const segments = call.transcript?.status === "DONE" ? readSegments(call.transcript.segments) : null;
+  if (segments) await audit(admin.id, "VIEW_TRANSCRIPT", "Call", callId);
+  revalidatePath("/admin/audit");
+  return { audioUrl, segments };
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge, DailyBars, Stat } from "@/components/admin-ui";
 import { db } from "@/lib/db";
 import { fmtDuration, timeAgo } from "@/lib/format";
+import { checkIntegrations } from "@/lib/health";
 
 const DAYS = 14;
 
@@ -43,6 +44,7 @@ export default async function AdminOverview() {
     callsDaily,
     signupsDaily,
     recent,
+    integrations,
   ] = await Promise.all([
     db.user.count(),
     db.user.count({ where: { createdAt: { gte: ago(7) } } }),
@@ -81,6 +83,7 @@ export default async function AdminOverview() {
         _count: { select: { participants: { where: { isHost: false, joinedAt: { not: null } } } } },
       },
     }),
+    checkIntegrations(),
   ]);
 
   const talkSecs = talk[0]?.secs ?? 0;
@@ -89,6 +92,26 @@ export default async function AdminOverview() {
 
   return (
     <div className="space-y-8">
+      <section>
+        <h2 className="mb-3 text-sm font-medium text-neutral-400">Integrations</h2>
+        <ul className="grid gap-2 md:grid-cols-2">
+          {integrations.map((c) => (
+            <li key={c.name} className="flex items-start gap-3 rounded-xl border border-neutral-800 p-3">
+              <span
+                className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${
+                  c.status === "ok" ? "bg-green-500" : c.status === "missing" ? "bg-neutral-600" : "bg-red-500"
+                }`}
+                aria-label={c.status}
+              />
+              <div className="min-w-0">
+                <div className="text-sm font-medium">{c.name}</div>
+                <div className={`text-xs ${c.status === "error" ? "text-red-300" : "text-neutral-500"}`}>{c.detail}</div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <section>
         <h2 className="mb-3 text-sm font-medium text-neutral-400">Right now</h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

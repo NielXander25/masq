@@ -4,6 +4,7 @@ import { CallRoom } from "@/components/call-room";
 import { RejoinButton } from "@/components/rejoin-button";
 import { db } from "@/lib/db";
 import { inviteUrl } from "@/lib/invite";
+import { recordingConfigured } from "@/lib/recording";
 import { isVoicePreset } from "@/lib/voice/presets";
 import { requireUser } from "@/lib/session";
 
@@ -24,6 +25,7 @@ export default async function CallPage({ params }: { params: Promise<{ callId: s
           voiceChangerEnabled: true,
           voicePreset: true,
           guestCamera: true,
+          recordingEnabled: true,
         },
       },
     },
@@ -70,6 +72,7 @@ export default async function CallPage({ params }: { params: Promise<{ callId: s
         isHost={false}
         alias={call.hostAlias}
         title={call.hostTitle}
+        recording={call.recordingEnabled && recordingConfigured()}
         cameraRequired={call.guestCamera === "REQUIRED"}
       />
     );
@@ -82,6 +85,7 @@ export default async function CallPage({ params }: { params: Promise<{ callId: s
       isHost
       alias={call.hostAlias}
       title={call.hostTitle}
+      recording={call.recordingEnabled && recordingConfigured()}
       inviteUrl={inviteUrl({ id: callId, hostAlias: call.hostAlias })}
       voicePreset={voicePreset}
     />

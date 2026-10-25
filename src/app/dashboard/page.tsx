@@ -6,6 +6,7 @@ import { NewCallForm } from "@/components/new-call-form";
 import { db } from "@/lib/db";
 import { inviteUrl } from "@/lib/invite";
 import { canUse } from "@/lib/plans";
+import { recordingConfigured } from "@/lib/recording";
 import { requireUser } from "@/lib/session";
 
 const STATUS_STYLE = {
@@ -62,7 +63,7 @@ export default async function DashboardPage() {
       </p>
 
       <div className="mt-8">
-        <NewCallForm canUseVoiceChanger={canUse("VOICE_CHANGER", user)} />
+        <NewCallForm canUseVoiceChanger={canUse("VOICE_CHANGER", user)} canRecord={recordingConfigured()} />
       </div>
 
       {joined.length > 0 && (
@@ -125,6 +126,14 @@ export default async function DashboardPage() {
                     {c.recordingEnabled && " · recorded"}
                   </div>
                 </div>
+                {c.status === "ENDED" && c.recordingEnabled && (
+                  <Link
+                    href={`/dashboard/calls/${c.id}`}
+                    className="rounded-lg border border-neutral-700 px-3 py-1.5 text-sm hover:bg-neutral-800"
+                  >
+                    Recording
+                  </Link>
+                )}
                 {c.status !== "ENDED" && (
                   <div className="flex gap-2">
                     <ShareButton url={inviteUrl(c)} />

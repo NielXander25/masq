@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { RevealHost } from "@/components/admin-controls";
+import { RecordingAccess, RevealHost } from "@/components/admin-controls";
 import { Badge, Empty, Stat } from "@/components/admin-ui";
 import { db } from "@/lib/db";
 import { callDurationSec, fmtDateTime, fmtDuration } from "@/lib/format";
@@ -115,9 +115,12 @@ export default async function AdminCallDetail({ params }: { params: Promise<{ ca
         {call.recordings.length === 0 && !call.transcript ? (
           <Empty>No recordings for this call.</Empty>
         ) : openReport ? (
-          <p className="text-sm text-neutral-400">
-            Access is available because this call has an open report. Every view is audit-logged.
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm text-neutral-400">
+              Available because this call has an open report. Opening it is audit-logged.
+            </p>
+            <RecordingAccess callId={call.id} />
+          </div>
         ) : (
           <p className="text-sm text-neutral-400">
             Recording and transcript access requires an open report on this call.
