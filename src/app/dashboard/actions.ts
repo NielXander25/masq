@@ -15,6 +15,7 @@ const createCallSchema = z
     voiceChangerEnabled: z.boolean(),
     voicePreset: z.enum(VOICE_PRESETS).optional(),
     recordingEnabled: z.boolean(),
+    guestCamera: z.enum(["OPTIONAL", "REQUIRED"]),
   })
   .refine((v) => !v.voiceChangerEnabled || v.voicePreset, {
     path: ["voicePreset"],
@@ -39,6 +40,7 @@ export async function createCall(
     voiceChangerEnabled: formData.get("voiceChangerEnabled") === "on",
     voicePreset: formData.get("voicePreset") || undefined,
     recordingEnabled: formData.get("recordingEnabled") === "on",
+    guestCamera: formData.get("guestCamera") ?? "OPTIONAL",
   });
   if (!parsed.success) {
     return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
@@ -59,6 +61,7 @@ export async function createCall(
       voiceChangerEnabled: input.voiceChangerEnabled,
       voicePreset: input.voiceChangerEnabled ? input.voicePreset : null,
       recordingEnabled: input.recordingEnabled,
+      guestCamera: input.guestCamera,
       participants: {
         create: {
           userId: user.id,

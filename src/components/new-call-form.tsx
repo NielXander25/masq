@@ -55,6 +55,20 @@ export function NewCallForm({ canUseVoiceChanger }: { canUseVoiceChanger: boolea
         {fe.voicePreset && <span className="block text-sm text-red-400">{fe.voicePreset[0]}</span>}
       </fieldset>
 
+      <fieldset>
+        <legend className="text-sm text-neutral-400">Guest camera</legend>
+        <div className="mt-1 grid grid-cols-2 gap-2">
+          <label className="flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-2 has-[:checked]:border-white">
+            <input type="radio" name="guestCamera" value="OPTIONAL" defaultChecked />
+            <span className="text-sm">Guest&apos;s choice</span>
+          </label>
+          <label className="flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-2 has-[:checked]:border-white">
+            <input type="radio" name="guestCamera" value="REQUIRED" />
+            <span className="text-sm">Required</span>
+          </label>
+        </div>
+      </fieldset>
+
       <label className="flex items-center gap-2">
         <input type="checkbox" name="recordingEnabled" />
         <span>Record and transcribe this call</span>

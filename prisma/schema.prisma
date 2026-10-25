@@ -43,6 +43,11 @@ enum JobStatus {
   FAILED
 }
 
+enum GuestCamera {
+  OPTIONAL
+  REQUIRED
+}
+
 enum ReportStatus {
   OPEN
   REVIEWED
@@ -115,6 +120,7 @@ model Call {
   voiceChangerEnabled Boolean       @default(false)
   voicePreset         String?
   recordingEnabled    Boolean       @default(false)
+  guestCamera         GuestCamera   @default(OPTIONAL)
   startedAt           DateTime?
   endedAt             DateTime?
   createdAt           DateTime      @default(now())
