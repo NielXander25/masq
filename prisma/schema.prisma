@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Plan {
+  FREE
+  PRO
+}
+
+enum CallStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+}
+
+enum ParticipantStatus {
+  PENDING
+  ADMITTED
+  DENIED
+  LEFT
+}
+
+enum RecordingKind {
+  TRACK
+  MIXED
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  ACTIONED
+  DISMISSED
+}
+
+model User {
+  id             String        @id @default(cuid())
+  email          String        @unique
+  emailVerified  DateTime?
+  name           String?
+  image          String?
+  role           Role          @default(USER)
+  plan           Plan          @default(FREE)
+  bannedAt       DateTime?
+  lastSeenAt     DateTime?
+  createdAt      DateTime      @default(now())
+  hostedCalls    Call[]        @relation("HostCalls")
+  participations Participant[]
+  reports        Report[]
+  accounts       Account[]
+  sessions       Session[]
+}
+
+// Auth.js models (https://authjs.dev/getting-started/adapters/prisma)
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model Call {
+  id                  String        @id @default(cuid())
+  hostId              String
+  host                User          @relation("HostCalls", fields: [hostId], references: [id])
+  hostAlias           String // 2–32 chars, set per call
+  roomName            String        @unique
+  status              CallStatus    @default(SCHEDULED)
+  voiceChangerEnabled Boolean       @default(false)
+  voicePreset         String?
+  recordingEnabled    Boolean       @default(false)
+  startedAt           DateTime?
+  endedAt             DateTime?
+  createdAt           DateTime      @default(now())
+  participants        Participant[]
+  recordings          Recording[]
+  transcript          Transcript?
+  reports             Report[]
+}
+
+model Participant {
+  id              String            @id @default(cuid())
+  callId          String
+  call            Call              @relation(fields: [callId], references: [id])
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  isHost          Boolean           @default(false)
+  livekitIdentity String            @unique
+  status          ParticipantStatus @default(PENDING)
+  consentedAt     DateTime?
+  joinedAt        DateTime?
+  leftAt          DateTime?
+  recordings      Recording[]
+
+  @@unique([callId, userId])
+}
+
+model Recording {
+  id            String        @id @default(cuid())
+  callId        String
+  call          Call          @relation(fields: [callId], references: [id])
+  participantId String?
+  participant   Participant?  @relation(fields: [participantId], references: [id])
+  kind          RecordingKind
+  egressId      String        @unique
+  fileKey       String? // R2 object key, never contains host identity
+  durationSec   Int?
+  status        JobStatus     @default(PENDING)
+  createdAt     DateTime      @default(now())
+}
+
+model Transcript {
+  id        String    @id @default(cuid())
+  callId    String    @unique
+  call      Call      @relation(fields: [callId], references: [id])
+  status    JobStatus @default(PENDING)
+  segments  Json? // [{ speakerLabel, startMs, endMs, text }]
+  text      String?
+  createdAt DateTime  @default(now())
+}
+
+model Report {
+  id         String       @id @default(cuid())
+  callId     String
+  call       Call         @relation(fields: [callId], references: [id])
+  reporterId String
+  reporter   User         @relation(fields: [reporterId], references: [id])
+  reason     String
+  status     ReportStatus @default(OPEN)
+  createdAt  DateTime     @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String // e.g. VIEW_HOST_IDENTITY, VIEW_RECORDING, BAN_USER
+  targetType String
+  targetId   String
+  createdAt  DateTime @default(now())
+}
