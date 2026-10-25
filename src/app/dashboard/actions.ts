@@ -4,10 +4,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { aliasSchema } from "@/lib/alias";
-import { randomId } from "@/lib/ids";
+import { randomId, shortCode } from "@/lib/ids";
 import { canUse } from "@/lib/plans";
 import { requireUser } from "@/lib/session";
-import { VOICE_PRESETS } from "@/lib/voice-presets";
+import { VOICE_PRESETS } from "@/lib/voice/presets";
 
 const createCallSchema = z
   .object({
@@ -51,6 +51,8 @@ export async function createCall(
 
   const call = await db.call.create({
     data: {
+      // Short ID so invite links stay short: /c/k7m2xq9p
+      id: shortCode(),
       hostId: user.id,
       hostAlias: input.alias,
       roomName: randomId("room", 12),
