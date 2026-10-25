@@ -1,4 +1,4 @@
-import { DSP_PRESETS, type VoicePreset } from "./presets";
+import { DSP_PRESETS, type VoiceMode } from "./presets";
 import type { VoiceProcessor } from "./types";
 
 const WORKLET_URL = "/voice/voice-shifter.js";
@@ -10,7 +10,7 @@ export class DspVoiceProcessor implements VoiceProcessor {
   private input: MediaStream | null = null;
   private monitoring = false;
 
-  async start(stream: MediaStream, preset: VoicePreset) {
+  async start(stream: MediaStream, mode: VoiceMode) {
     if (typeof AudioWorkletNode === "undefined") {
       throw new Error("This browser can't disguise your voice. Try a recent Chrome, Edge, Firefox or Safari.");
     }
@@ -28,7 +28,7 @@ export class DspVoiceProcessor implements VoiceProcessor {
     const dest = ctx.createMediaStreamDestination();
     source.connect(node).connect(dest);
     this.node = node;
-    this.setPreset(preset);
+    this.setPreset(mode);
 
     if (ctx.state === "suspended") await ctx.resume();
     const track = dest.stream.getAudioTracks()[0];
@@ -36,8 +36,8 @@ export class DspVoiceProcessor implements VoiceProcessor {
     return track;
   }
 
-  setPreset(preset: VoicePreset) {
-    this.node?.port.postMessage(DSP_PRESETS[preset]);
+  setPreset(mode: VoiceMode) {
+    this.node?.port.postMessage(DSP_PRESETS[mode]);
   }
 
   setMonitor(on: boolean) {
@@ -57,7 +57,10 @@ export class DspVoiceProcessor implements VoiceProcessor {
   }
 }
 
-/** Microphone settings tuned for speech. */
+/**
+ * Microphone tuned for speech. The browser's own noise suppression runs first;
+ * the worklet's spectral suppression then cleans up what's left.
+ */
 export function getMicrophone() {
   return navigator.mediaDevices.getUserMedia({
     audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },

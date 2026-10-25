@@ -1,25 +1,31 @@
 "use client";
 
 import { create } from "zustand";
-import type { VoicePreset } from "./presets";
+import type { VoiceMode } from "./presets";
 import type { VoiceProcessor } from "./types";
 
-type VoiceState = {
-  preset: VoicePreset;
+type MicState = {
+  mode: VoiceMode;
   processor: VoiceProcessor | null;
-  /** The disguised track, ready to publish. Never the raw microphone. */
+  /** The processed track, ready to publish. Never the raw microphone. */
   track: MediaStreamTrack | null;
-  setPreset: (preset: VoicePreset) => void;
+  setMode: (mode: VoiceMode) => void;
   setProcessor: (processor: VoiceProcessor | null, track: MediaStreamTrack | null) => void;
+  /** Stop the microphone and forget the processor. */
+  release: () => void;
 };
 
-export const useVoiceStore = create<VoiceState>((set, get) => ({
-  preset: "neutral-mask",
+export const useMicStore = create<MicState>((set, get) => ({
+  mode: "clean",
   processor: null,
   track: null,
-  setPreset: (preset) => {
-    get().processor?.setPreset(preset);
-    set({ preset });
+  setMode: (mode) => {
+    get().processor?.setPreset(mode);
+    set({ mode });
   },
   setProcessor: (processor, track) => set({ processor, track }),
+  release: () => {
+    get().processor?.stop();
+    set({ processor: null, track: null });
+  },
 }));

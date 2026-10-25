@@ -5,6 +5,11 @@
 // moved by `pitch`, and the envelope is stretched by `formant`, so the two can be
 // changed independently. `robot` throws away phase to give a flat, buzzy voice.
 //
+// `denoise` is spectral noise suppression: a per-bin noise floor is tracked
+// (it falls quickly and rises slowly, so it follows steady background noise but
+// not speech), and bins near the floor are turned down. With pitch = formant = 1
+// and no robot, the vocoder is bypassed and only noise suppression is applied.
+//
 // FFT size 1024 with 4x overlap: added latency is N - hop = 768 samples
 // (16 ms at 48 kHz).
 
@@ -16,6 +21,14 @@ const LATENCY = N - HOP;
 const TWO_PI = 2 * Math.PI;
 const EXPECTED = (TWO_PI * HOP) / N;
 const EPS = 1e-9;
+const PSD_SMOOTH = 0.6;
+const NOISE_FALL = 0.9; // power below the floor: follow it down
+const NOISE_LIKE = 3; // power within 3x the floor counts as noise
+const NOISE_TRACK = 0.97; // ...and is averaged in
+const NOISE_RISE = 0.9995; // louder than that is speech: barely move
+const OVER_SUBTRACT = 2;
+const GAIN_FLOOR = 0.08; // about -22 dB
+const WARMUP_FRAMES = 12;
 
 class VoiceShifter extends AudioWorkletProcessor {
   constructor() {
@@ -24,6 +37,7 @@ class VoiceShifter extends AudioWorkletProcessor {
     this.formant = 1;
     this.robot = false;
     this.gain = 1;
+    this.denoise = true;
 
     this.inFifo = new Float32Array(N);
     this.outFifo = new Float32Array(N);
@@ -38,6 +52,10 @@ class VoiceShifter extends AudioWorkletProcessor {
     this.synFreq = new Float32Array(HALF + 1);
     this.env = new Float32Array(HALF + 1);
     this.tmp = new Float32Array(HALF + 1);
+    this.psd = new Float32Array(HALF + 1);
+    this.noise = new Float32Array(HALF + 1);
+    this.nsGain = new Float32Array(HALF + 1).fill(1);
+    this.frames = 0;
     this.rover = LATENCY;
 
     this.window = new Float32Array(N);
@@ -64,11 +82,12 @@ class VoiceShifter extends AudioWorkletProcessor {
     this.envRadius = Math.max(2, Math.round(300 / binHz));
 
     this.port.onmessage = (e) => {
-      const { pitch, formant, robot, gain } = e.data ?? {};
+      const { pitch, formant, robot, gain, denoise } = e.data ?? {};
       if (typeof pitch === "number" && pitch > 0.25 && pitch < 4) this.pitch = pitch;
       if (typeof formant === "number" && formant > 0.25 && formant < 4) this.formant = formant;
       if (typeof robot === "boolean") this.robot = robot;
       if (typeof gain === "number" && gain > 0 && gain < 8) this.gain = gain;
+      if (typeof denoise === "boolean") this.denoise = denoise;
     };
   }
 
@@ -123,14 +142,61 @@ class VoiceShifter extends AudioWorkletProcessor {
     for (let k = 0; k <= HALF; k++) env[k] = Math.exp(env[k]);
   }
 
+  // Per-bin suppression gain from a tracked noise floor (spectral subtraction).
+  updateNoiseGain() {
+    const { re, im, psd, noise, nsGain } = this;
+    const warm = this.frames < WARMUP_FRAMES;
+    for (let k = 0; k <= HALF; k++) {
+      const p = re[k] * re[k] + im[k] * im[k];
+      // Smooth power over a few frames: per-frame power is far too jumpy.
+      psd[k] = this.frames === 0 ? p : PSD_SMOOTH * psd[k] + (1 - PSD_SMOOTH) * p;
+      const ps = psd[k];
+      if (warm) {
+        noise[k] = this.frames === 0 ? ps : noise[k] + (ps - noise[k]) / (this.frames + 1);
+      } else if (ps < noise[k]) {
+        noise[k] = NOISE_FALL * noise[k] + (1 - NOISE_FALL) * ps;
+      } else if (ps < NOISE_LIKE * noise[k]) {
+        noise[k] = NOISE_TRACK * noise[k] + (1 - NOISE_TRACK) * ps;
+      } else {
+        noise[k] = NOISE_RISE * noise[k] + (1 - NOISE_RISE) * ps;
+      }
+      const g = Math.max(GAIN_FLOOR, 1 - (OVER_SUBTRACT * noise[k]) / (ps + EPS));
+      // Open quickly, close slowly: avoids "musical noise" warble.
+      const prev = nsGain[k];
+      nsGain[k] = g > prev ? 0.5 * prev + 0.5 * g : 0.85 * prev + 0.15 * g;
+    }
+    this.frames++;
+  }
+
   processFrame() {
-    const { re, im, window, anaMag, anaFreq, synMag, synFreq, env, lastPhase, sumPhase } = this;
+    const { re, im, window, anaMag, anaFreq, synMag, synFreq, env, lastPhase, sumPhase, nsGain } = this;
 
     for (let k = 0; k < N; k++) {
       re[k] = this.inFifo[k] * window[k];
       im[k] = 0;
     }
     this.fft(re, im, -1);
+    if (this.denoise) this.updateNoiseGain();
+
+    if (this.pitch === 1 && this.formant === 1 && !this.robot) {
+      // Clean voice: keep the original phases, apply only noise suppression.
+      for (let k = 0; k <= HALF; k++) {
+        const g = this.denoise ? nsGain[k] : 1;
+        re[k] *= g;
+        im[k] *= g;
+        // Keep phase tracking current so switching to a preset doesn't click.
+        const phase = Math.atan2(im[k], re[k]);
+        lastPhase[k] = phase;
+        sumPhase[k] = phase;
+      }
+      for (let k = 1; k < HALF; k++) {
+        re[N - k] = re[k];
+        im[N - k] = -im[k];
+      }
+      this.fft(re, im, 1);
+      this.overlapAdd(1 / N);
+      return;
+    }
 
     // Analysis: magnitude and true frequency (in bins) for each bin.
     for (let k = 0; k <= HALF; k++) {
@@ -144,7 +210,7 @@ class VoiceShifter extends AudioWorkletProcessor {
       else qpd -= qpd & 1;
       d -= Math.PI * qpd;
       anaFreq[k] = k + (OSAMP * d) / TWO_PI;
-      anaMag[k] = mag;
+      anaMag[k] = this.denoise ? mag * nsGain[k] : mag;
     }
 
     this.envelope();
@@ -189,9 +255,14 @@ class VoiceShifter extends AudioWorkletProcessor {
     }
     this.fft(re, im, 1);
 
-    // Hann analysis and synthesis windows at 4x overlap sum to 1.5.
-    const scale = (2 / (HALF * OSAMP * 1.5)) * this.gain;
-    for (let k = 0; k < N; k++) this.outAccum[k] += window[k] * re[k] * scale;
+    this.overlapAdd((2 / (HALF * OSAMP)) * this.gain);
+  }
+
+  // Window, overlap-add and advance by one hop. Hann analysis and synthesis
+  // windows at 4x overlap sum to 1.5, hence the division.
+  overlapAdd(scale) {
+    const s = scale / 1.5;
+    for (let k = 0; k < N; k++) this.outAccum[k] += this.window[k] * this.re[k] * s;
     for (let k = 0; k < HOP; k++) this.outFifo[k] = this.outAccum[k];
     this.outAccum.copyWithin(0, HOP, HOP + N);
     this.outAccum.fill(0, N, N + HOP);
