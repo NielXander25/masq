@@ -13,7 +13,11 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
+    "@livekit/components-react": "^2.9.24",
+    "@livekit/components-styles": "^1.2.0",
     "@prisma/client": "^6.19.3",
+    "livekit-client": "^2.23.0",
+    "livekit-server-sdk": "^2.19.2",
     "next": "15.5.28",
     "next-auth": "^5.0.0-beta.32",
     "react": "19.1.0",
