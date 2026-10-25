@@ -25,6 +25,7 @@ export function PreJoin({ alias, title, isHost, disguise, cameraRequired = false
   const [mic, setMic] = useState<"idle" | "starting" | "ready" | "error">(processor ? "ready" : "idle");
   const [micError, setMicError] = useState<string | null>(null);
   const [monitor, setMonitor] = useState(false);
+  const [noEchoCancel, setNoEchoCancel] = useState(false);
   const [camera, setCamera] = useState<MediaStream | null>(null);
   const [camError, setCamError] = useState<string | null>(null);
   const video = useRef<HTMLVideoElement>(null);
@@ -41,6 +42,9 @@ export function PreJoin({ alias, title, isHost, disguise, cameraRequired = false
     setMicError(null);
     try {
       const stream = await getMicrophone();
+      // Some browsers ignore the request for echo cancellation: warn, since
+      // without it the other side hears themselves back.
+      setNoEchoCancel(stream.getAudioTracks()[0]?.getSettings().echoCancellation === false);
       const p = new DspVoiceProcessor();
       const track = await p.start(stream, mode);
       setProcessor(p, track);
@@ -152,6 +156,14 @@ export function PreJoin({ alias, title, isHost, disguise, cameraRequired = false
           </button>
         )}
         {monitor && <p className="text-xs text-neutral-500">Use headphones, or you&apos;ll hear feedback.</p>}
+        {noEchoCancel && (
+          <p className="text-xs text-amber-300">
+            This browser isn&apos;t cancelling echo. Please use headphones.
+          </p>
+        )}
+        <p className="text-xs text-neutral-500">
+          Tip: headphones give the clearest sound. Keep other devices in the call out of the room to avoid echo.
+        </p>
         {micError && <p className="text-sm text-red-400">{micError}</p>}
       </section>
 
