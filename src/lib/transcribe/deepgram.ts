@@ -17,7 +17,8 @@ export class DeepgramTranscriber implements Transcriber {
       smart_format: "true",
       punctuate: "true",
       utterances: "true",
-      detect_language: "true",
+      // Auto-detection misreads short or disguised speech (e.g. as Turkish).
+      language: "en",
     });
     const res = await fetch(`https://api.deepgram.com/v1/listen?${params}`, {
       method: "POST",

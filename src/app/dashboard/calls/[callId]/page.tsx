@@ -22,20 +22,41 @@ export default async function CallRecordingPage({ params }: { params: Promise<{ 
       endedAt: true,
       recordingEnabled: true,
       recordings: {
-        where: { kind: "MIXED" },
-        select: { fileKey: true, status: true, durationSec: true },
+        select: {
+          kind: true,
+          fileKey: true,
+          status: true,
+          durationSec: true,
+          startedAt: true,
+          participant: { select: { isHost: true, user: { select: { name: true, email: true } } } },
+        },
+        orderBy: { startedAt: "asc" },
       },
       transcript: { select: { status: true, segments: true } },
     },
   });
   if (!call) notFound();
 
-  const mixed = call.recordings[0];
-  const audioReady = mixed?.status === "DONE" && mixed.fileKey && r2Configured();
+  const mixed = call.recordings.find((r) => r.kind === "MIXED" && r.status === "DONE");
+  const audioReady = Boolean(mixed?.fileKey) && r2Configured();
+  // Without a room mix (e.g. the plan's recording limit was hit), offer each speaker's track.
+  const tracks = r2Configured()
+    ? call.recordings
+        .filter((r) => r.kind === "TRACK" && r.status === "DONE" && r.fileKey)
+        .map((r) => ({
+          label: !r.participant || r.participant.isHost ? `${call.hostAlias} (you)` : (r.participant.user.name ?? r.participant.user.email),
+          url: r2SignedUrl(r.fileKey!),
+          downloadUrl: r2SignedUrl(r.fileKey!, { downloadName: `masqq-${call.id}-${r.fileKey!.split("/").pop()}` }),
+        }))
+    : [];
+  const anyPending = call.recordings.some((r) => r.status === "PENDING" || r.status === "PROCESSING");
+  const allFailed = call.recordings.length > 0 && call.recordings.every((r) => r.status === "FAILED");
+  const duration = mixed?.durationSec ?? Math.max(0, ...call.recordings.map((r) => r.durationSec ?? 0));
   // Signed links expire after an hour.
-  const audioUrl = audioReady ? r2SignedUrl(mixed.fileKey!) : null;
-  const downloadUrl = audioReady
-    ? r2SignedUrl(mixed.fileKey!, { downloadName: `masqq-${call.hostAlias}-${call.id}.ogg` })
+  const mixedKey = audioReady ? mixed?.fileKey : null;
+  const audioUrl = mixedKey ? r2SignedUrl(mixedKey) : null;
+  const downloadUrl = mixedKey
+    ? r2SignedUrl(mixedKey, { downloadName: `masqq-${call.hostAlias}-${call.id}.ogg` })
     : null;
   const segments = readSegments(call.transcript?.segments);
 
@@ -53,7 +74,7 @@ export default async function CallRecordingPage({ params }: { params: Promise<{ 
       <h1 className="mt-8 text-2xl font-semibold">{call.hostAlias}</h1>
       <p className="mt-1 text-sm text-neutral-400">
         {fmtDateTime(call.startedAt)}
-        {mixed?.durationSec ? ` · ${fmtDuration(mixed.durationSec)}` : ""}
+        {duration ? ` · ${fmtDuration(duration)}` : ""}
       </p>
 
       {!call.recordingEnabled ? (
@@ -79,7 +100,30 @@ export default async function CallRecordingPage({ params }: { params: Promise<{ 
                   )}
                 </div>
               </>
-            ) : mixed?.status === "FAILED" ? (
+            ) : tracks.length && !anyPending ? (
+              <div className="space-y-4">
+                <p className="text-xs text-neutral-500">Each speaker was recorded separately.</p>
+                {tracks.map((t, i) => (
+                  <div key={i}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="font-medium">{t.label}</span>
+                      <a href={t.downloadUrl} className="text-xs text-neutral-400 underline">
+                        Download
+                      </a>
+                    </div>
+                    <audio controls preload="metadata" src={t.url} className="w-full" />
+                  </div>
+                ))}
+                {call.transcript?.status === "DONE" && (
+                  <a
+                    href={`/api/calls/${call.id}/transcript`}
+                    className="inline-block rounded-lg border border-neutral-700 px-3 py-1.5 text-sm hover:bg-neutral-800"
+                  >
+                    Download transcript (.txt)
+                  </a>
+                )}
+              </div>
+            ) : allFailed ? (
               <p className="text-sm text-red-400">The recording failed.</p>
             ) : call.status !== "ENDED" ? (
               <p className="text-sm text-neutral-400">The call is still going. The recording appears here after it ends.</p>

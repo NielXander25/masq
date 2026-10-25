@@ -49,6 +49,31 @@ export async function startMixedRecording(call: { id: string; roomName: string }
   });
 }
 
+/** LiveKit plans cap concurrent egress sessions; it answers 429 when full. */
+function isEgressLimit(e: unknown) {
+  const err = e as { status?: number; code?: string; message?: string };
+  return err?.status === 429 || err?.code === "resource_exhausted" || /egress sessions limit/i.test(err?.message ?? "");
+}
+
+/**
+ * Per-speaker tracks matter more than the room mix (transcripts need them).
+ * If the plan's egress limit is hit, stop the mix to free a slot.
+ */
+async function freeSlotByStoppingMix(callId: string) {
+  const mix = await db.recording.findFirst({
+    where: { callId, kind: "MIXED", status: { in: ["PENDING", "PROCESSING"] } },
+    select: { id: true, egressId: true },
+  });
+  if (!mix) return false;
+  try {
+    await egressClient().stopEgress(mix.egressId);
+  } catch {
+    // Already stopping or gone.
+  }
+  await db.recording.update({ where: { id: mix.id }, data: { status: "FAILED" } });
+  return true;
+}
+
 /** One file per published microphone track, for per-speaker transcripts. */
 export async function startTrackRecording(
   call: { id: string; roomName: string },
@@ -59,11 +84,29 @@ export async function startTrackRecording(
   const fileKey = `calls/${call.id}/${participant.livekitIdentity}-${trackSid}.ogg`;
   const exists = await db.recording.count({ where: { callId: call.id, fileKey } });
   if (exists) return;
-  const info = await egressClient().startTrackEgress(
-    call.roomName,
-    new DirectFileOutput({ filepath: fileKey, output: { case: "s3", value: s3() } }),
-    trackSid,
-  );
+  const start = () =>
+    egressClient().startTrackEgress(
+      call.roomName,
+      new DirectFileOutput({ filepath: fileKey, output: { case: "s3", value: s3() } }),
+      trackSid,
+    );
+  let info;
+  try {
+    info = await start();
+  } catch (e) {
+    if (!isEgressLimit(e) || !(await freeSlotByStoppingMix(call.id))) throw e;
+    console.warn("Egress limit reached: stopped the room mix to record a speaker", call.id);
+    // The stopped session can take a moment to release.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        info = await start();
+        break;
+      } catch (retryError) {
+        if (!isEgressLimit(retryError) || attempt >= 4) throw retryError;
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+  }
   await db.recording.create({
     data: {
       callId: call.id,
