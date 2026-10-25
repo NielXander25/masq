@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CallRoom } from "@/components/call-room";
+import { RejoinButton } from "@/components/rejoin-button";
 import { db } from "@/lib/db";
 import { inviteUrl } from "@/lib/invite";
 import { isVoicePreset } from "@/lib/voice/presets";
@@ -33,6 +34,18 @@ export default async function CallPage({ params }: { params: Promise<{ callId: s
     redirect(`/c/${callId}`);
   }
   const { call } = participant;
+  if (!participant.isHost && participant.status === "LEFT" && call.status !== "ENDED") {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
+        <p className="text-sm text-neutral-400">You left your call with</p>
+        <h1 className="text-3xl font-semibold">{call.hostAlias}</h1>
+        <RejoinButton callId={callId} />
+        <Link href="/dashboard" className="text-sm text-neutral-400 underline">
+          Back to dashboard
+        </Link>
+      </main>
+    );
+  }
   if (!participant.isHost && participant.status !== "ADMITTED" && call.status !== "ENDED") {
     redirect(`/c/${callId}`);
   }

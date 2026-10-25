@@ -23,6 +23,7 @@ import { ShareButton } from "@/components/copy-button";
 import { LobbyPanel } from "@/components/lobby-panel";
 import { CameraRequiredGuard, MicButton, PresetSwitcher } from "@/components/mic-controls";
 import { PreJoin } from "@/components/prejoin";
+import { RejoinButton } from "@/components/rejoin-button";
 import type { VoicePreset } from "@/lib/voice/presets";
 import { useMicStore } from "@/lib/voice/store";
 
@@ -96,8 +97,10 @@ export function CallRoom({
   function onDisconnected(reason?: DisconnectReason) {
     if (reason === DisconnectReason.ROOM_DELETED) return setPhase("ended");
     if (reason === DisconnectReason.CLIENT_INITIATED) {
-      void fetch(`/api/calls/${callId}/leave`, { method: "POST" });
-      return setPhase((p) => (p === "ended" ? p : "left"));
+      void fetch(`/api/calls/${callId}/leave`, { method: "POST" }).finally(() =>
+        setPhase((p) => (p === "ended" ? p : "left")),
+      );
+      return;
     }
     if (reason === DisconnectReason.PARTICIPANT_REMOVED) return setPhase("left");
   }
@@ -122,10 +125,15 @@ export function CallRoom({
     return (
       <Message title="You left the call.">
         {isHost ? (
-          <button onClick={() => location.reload()} className="underline">
-            Rejoin
+          <button
+            onClick={() => location.reload()}
+            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black hover:bg-neutral-200"
+          >
+            Rejoin call
           </button>
-        ) : null}
+        ) : (
+          <RejoinButton callId={callId} />
+        )}
       </Message>
     );
   }

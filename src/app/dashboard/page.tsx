@@ -16,6 +16,18 @@ const STATUS_STYLE = {
 
 export default async function DashboardPage() {
   const user = await requireUser("/dashboard");
+  // Calls this user joined as a guest. Only the alias is shown, never the host's account.
+  const joined = await db.participant.findMany({
+    where: { userId: user.id, isHost: false, joinedAt: { not: null } },
+    orderBy: { joinedAt: "desc" },
+    take: 20,
+    select: {
+      status: true,
+      joinedAt: true,
+      call: { select: { id: true, hostAlias: true, hostTitle: true, status: true } },
+    },
+  });
+
   const calls = await db.call.findMany({
     where: { hostId: user.id },
     orderBy: { createdAt: "desc" },
@@ -33,7 +45,7 @@ export default async function DashboardPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <header className="flex items-center justify-between gap-4">
-        <Link href="/dashboard" aria-label="Masq dashboard">
+        <Link href="/dashboard" aria-label="masqq dashboard">
           <Logo className="text-xl" />
         </Link>
         <div className="flex items-center gap-3">
@@ -53,8 +65,44 @@ export default async function DashboardPage() {
         <NewCallForm canUseVoiceChanger={canUse("VOICE_CHANGER", user)} />
       </div>
 
+      {joined.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-lg font-medium">Calls you joined</h2>
+          <ul className="mt-3 divide-y divide-neutral-800 rounded-xl border border-neutral-800">
+            {joined.map(({ call, status, joinedAt }) => {
+              const canRejoin = call.status !== "ENDED" && (status === "LEFT" || status === "ADMITTED");
+              return (
+                <li key={call.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{call.hostAlias}</span>
+                      {call.hostTitle && <span className="text-sm text-neutral-400">{call.hostTitle}</span>}
+                      <span className={`rounded px-1.5 py-0.5 text-xs ${STATUS_STYLE[call.status]}`}>
+                        {call.status}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs text-neutral-500">
+                      Joined{" "}
+                      {joinedAt?.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
+                    </div>
+                  </div>
+                  {canRejoin && (
+                    <Link
+                      href={`/call/${call.id}`}
+                      className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-black hover:bg-neutral-200"
+                    >
+                      Rejoin
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
       <section className="mt-10">
-        <h2 className="text-lg font-medium">Your calls</h2>
+        <h2 className="text-lg font-medium">Calls you hosted</h2>
         {calls.length === 0 ? (
           <p className="mt-3 rounded-lg border border-dashed border-neutral-800 p-6 text-sm text-neutral-500">
             No calls yet. Create one above, then share the invite link.
