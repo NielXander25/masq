@@ -1,23 +1,16 @@
-/** masqq mark: a face ("nose") mask. Uses currentColor, so it works on any background. */
+/** masqq mark: a white face ("nose") mask on a black circle. */
 export function LogoMark({ className = "h-7 w-7" }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden>
-      <defs>
-        {/* Cuts the pleats out of the mask so the background shows through. */}
-        <mask id="masqq-pleats">
-          <rect width="64" height="64" fill="white" />
-          <g fill="none" stroke="black" strokeWidth="2" strokeLinecap="round">
-            <path d="M18 27.5Q32 22 46 27.5" />
-            <path d="M18 33Q32 28.5 46 33" />
-            <path d="M18 38.5Q32 35 46 38.5" />
-          </g>
-        </mask>
-      </defs>
-      <g fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-        <path d="M15 24C6 22 4 41 15 41" />
-        <path d="M49 24C58 22 60 41 49 41" />
+      {/* The thin ring keeps the black circle visible on the dark app background. */}
+      <circle cx="32" cy="32" r="31" fill="#000" stroke="#404040" strokeWidth="2" />
+      <g fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 24.5Q32 17.5 47 24.5V36.5Q32 46.5 17 36.5Z" />
+        <path d="M21 28.6Q32 24.6 43 28.6" />
+        <path d="M21 33.2Q32 29.6 43 33.2" />
+        <path d="M17 26C10 25 9 37 17 35.5" />
+        <path d="M47 26C54 25 55 37 47 35.5" />
       </g>
-      <path fill="currentColor" mask="url(#masqq-pleats)" d="M14 23Q32 13 50 23V39Q32 53 14 39Z" />
     </svg>
   );
 }
