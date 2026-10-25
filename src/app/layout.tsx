@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Masq",
+  title: "masqq",
   description: "Anonymous-host voice and video calls with identified guests.",
 };
 

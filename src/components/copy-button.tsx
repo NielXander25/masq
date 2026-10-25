@@ -9,7 +9,7 @@ export function ShareButton({ url, label = "Share invite" }: { url: string; labe
   async function share() {
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Join my Masq call", url });
+        await navigator.share({ title: "Join my masqq call", url });
         return;
       } catch (e) {
         if ((e as Error).name === "AbortError") return;

@@ -9,7 +9,7 @@ export default async function Home() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-6 px-4">
       <h1 className="flex items-center gap-3 text-5xl font-semibold tracking-tight">
         <LogoMark className="h-14 w-14" />
-        Masq
+        masqq
       </h1>
       <p className="text-lg text-neutral-400">
         Host voice and video calls under any name, with a disguised voice. Every

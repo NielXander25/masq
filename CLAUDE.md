@@ -1,6 +1,6 @@
-# Masq — Project Brief for Claude Code
+# masqq — Project Brief for Claude Code
 
-Masq is a browser-based voice/video call platform where **the host is anonymous** and **every guest is identified**. The host picks any display name for each call and can disguise their voice. Guests must sign in with Google, so the host sees their real name and email. After each call, the host receives the audio recording and a speaker-labelled transcript. A platform admin can see all users, all calls, and the real account behind every anonymous host.
+masqq is a browser-based voice/video call platform where **the host is anonymous** and **every guest is identified**. The host picks any display name for each call and can disguise their voice. Guests must sign in with Google, so the host sees their real name and email. After each call, the host receives the audio recording and a speaker-labelled transcript. A platform admin can see all users, all calls, and the real account behind every anonymous host.
 
 Owner: KING'SMIND LABS (KMLABS). Priority: get a working MVP live fast, then harden.
 
@@ -181,7 +181,7 @@ Do the phases in order. At the end of each phase, stop and summarise what was bu
 
 ### Phase 2 — Calls, lobby, host approval
 - `/dashboard`: "New call" form (alias, voice changer on/off + preset, recording on/off). Lists my past calls.
-- Alias validation: 2–32 chars; block "admin", "support", "masq", "moderator", and similar (case-insensitive).
+- Alias validation: 2–32 chars; block "admin", "support", "masq"/"masqq", "moderator", and similar (case-insensitive).
 - Invite link: `/c/[callId]`.
 - Guest flow: sign in → consent screen → "Request to join" → creates a `PENDING` participant → waits (poll or LiveKit data message) → gets a token once admitted.
 - Host flow: joins their own room and sees a lobby panel with each pending guest's name, email, and avatar, plus Admit/Deny buttons.

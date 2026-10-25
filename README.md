@@ -1,4 +1,4 @@
-# Masq
+# masqq
 
 Browser-based voice/video calls where the host is anonymous and every guest is identified. See `CLAUDE.md` for the full brief.
 
