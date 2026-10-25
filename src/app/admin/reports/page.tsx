@@ -1,0 +1,58 @@
+import Link from "next/link";
+import { setReportStatus } from "@/app/admin/actions";
+import { Badge, Empty } from "@/components/admin-ui";
+import { db } from "@/lib/db";
+import { fmtDateTime } from "@/lib/format";
+
+const STATUSES = ["OPEN", "REVIEWED", "ACTIONED", "DISMISSED"] as const;
+
+export default async function AdminReports() {
+  const reports = await db.report.findMany({
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    take: 200,
+    select: {
+      id: true,
+      reason: true,
+      status: true,
+      createdAt: true,
+      reporter: { select: { name: true, email: true } },
+      call: { select: { id: true, hostAlias: true } },
+    },
+  });
+
+  if (reports.length === 0) return <Empty>No reports yet.</Empty>;
+
+  return (
+    <ul className="divide-y divide-neutral-800 rounded-xl border border-neutral-800">
+      {reports.map((r) => (
+        <li key={r.id} className="space-y-2 p-4">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <Badge>{r.status}</Badge>
+            <Link href={`/admin/calls/${r.call.id}`} className="font-medium hover:underline">
+              {r.call.hostAlias}
+            </Link>
+            <span className="text-neutral-500">
+              reported by {r.reporter.email} · {fmtDateTime(r.createdAt)}
+            </span>
+          </div>
+          <p className="text-sm">{r.reason}</p>
+          <form action={setReportStatus} className="flex items-center gap-2">
+            <input type="hidden" name="reportId" value={r.id} />
+            <select
+              name="status"
+              defaultValue={r.status}
+              className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
+            >
+              {STATUSES.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+            <button className="rounded-md border border-neutral-700 px-2 py-1 text-xs hover:bg-neutral-800">
+              Update
+            </button>
+          </form>
+        </li>
+      ))}
+    </ul>
+  );
+}
