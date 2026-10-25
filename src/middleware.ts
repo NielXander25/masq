@@ -32,5 +32,5 @@ export default auth(async (req) => {
 export const config = {
   // Database sessions need Prisma, so run middleware on Node.js, not the edge.
   runtime: "nodejs",
-  matcher: ["/dashboard/:path*", "/call/:path*", "/admin/:path*"],
+  matcher: ["/dashboard/:path*", "/call/:path*", "/c/:path*", "/admin/:path*"],
 };
