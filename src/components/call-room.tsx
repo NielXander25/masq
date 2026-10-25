@@ -12,17 +12,42 @@ import {
 import { DisconnectReason, Track } from "livekit-client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ShareButton } from "@/components/copy-button";
+import { HostVoicePublisher, PresetSwitcher } from "@/components/host-voice";
 import { LobbyPanel } from "@/components/lobby-panel";
+import { VoicePreview } from "@/components/voice-preview";
+import type { VoicePreset } from "@/lib/voice/presets";
+import { useVoiceStore } from "@/lib/voice/store";
 
-type Props = { callId: string; isHost: boolean; alias: string };
-type Phase = "connecting" | "in-call" | "left" | "ended" | "error";
+type Props = {
+  callId: string;
+  isHost: boolean;
+  alias: string;
+  /** Host only. */
+  inviteUrl?: string;
+  /** Host only: disguise the voice with this preset. */
+  voicePreset?: VoicePreset | null;
+};
+type Phase = "preview" | "connecting" | "in-call" | "left" | "ended" | "error";
 
-export function CallRoom({ callId, isHost, alias }: Props) {
+export function CallRoom({ callId, isHost, alias, inviteUrl, voicePreset }: Props) {
+  const voiceOn = isHost && Boolean(voicePreset);
+  const [phase, setPhase] = useState<Phase>(voiceOn ? "preview" : "connecting");
   const [conn, setConn] = useState<{ token: string; serverUrl: string } | null>(null);
-  const [phase, setPhase] = useState<Phase>("connecting");
   const [error, setError] = useState<string | null>(null);
 
+  // Seed the preset once, and release the microphone when leaving the page.
   useEffect(() => {
+    if (voicePreset) useVoiceStore.getState().setPreset(voicePreset);
+    return () => {
+      const { processor, setProcessor } = useVoiceStore.getState();
+      processor?.stop();
+      setProcessor(null, null);
+    };
+  }, [voicePreset]);
+
+  useEffect(() => {
+    if (phase !== "connecting") return;
     let cancelled = false;
     (async () => {
       const res = await fetch("/api/livekit/token", {
@@ -43,7 +68,7 @@ export function CallRoom({ callId, isHost, alias }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [callId]);
+  }, [callId, phase]);
 
   async function endCall() {
     if (!confirm("End the call for everyone?")) return;
@@ -60,6 +85,7 @@ export function CallRoom({ callId, isHost, alias }: Props) {
     if (reason === DisconnectReason.PARTICIPANT_REMOVED) return setPhase("left");
   }
 
+  if (phase === "preview") return <VoicePreview alias={alias} onJoin={() => setPhase("connecting")} />;
   if (phase === "ended") return <Message title="This call has ended." />;
   if (phase === "left") {
     return (
@@ -77,18 +103,23 @@ export function CallRoom({ callId, isHost, alias }: Props) {
 
   return (
     <div className="flex h-dvh flex-col">
-      <header className="flex items-center justify-between gap-3 border-b border-neutral-800 px-4 py-3">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 px-4 py-3">
         <div className="min-w-0">
           <div className="truncate font-medium">{alias}</div>
-          <div className="text-xs text-neutral-500">{isHost ? "You are hosting anonymously" : "Anonymous host"}</div>
+          <div className="text-xs text-neutral-500">
+            {isHost ? "You are hosting anonymously" : "Anonymous host"}
+          </div>
         </div>
         {isHost && (
-          <button
-            onClick={endCall}
-            className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500"
-          >
-            End call
-          </button>
+          <div className="flex items-center gap-2">
+            {voiceOn && <PresetSwitcher />}
+            <button
+              onClick={endCall}
+              className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500"
+            >
+              End call
+            </button>
+          </div>
         )}
       </header>
 
@@ -99,7 +130,9 @@ export function CallRoom({ callId, isHost, alias }: Props) {
           token={conn.token}
           serverUrl={conn.serverUrl}
           connect
-          audio
+          // With the voice changer on, LiveKit never opens the real microphone:
+          // HostVoicePublisher publishes the disguised track instead.
+          audio={!voiceOn}
           video={!isHost}
           // The host's media only ever goes through TURN, so guests never see their IP.
           connectOptions={isHost ? { rtcConfig: { iceTransportPolicy: "relay" } } : undefined}
@@ -111,15 +144,35 @@ export function CallRoom({ callId, isHost, alias }: Props) {
         >
           <Stage />
           <RoomAudioRenderer />
+          {voiceOn && <HostVoicePublisher />}
           <ControlBar
-            controls={{ microphone: true, camera: !isHost, screenShare: !isHost, chat: false, leave: true }}
+            controls={{
+              microphone: !voiceOn,
+              camera: !isHost,
+              screenShare: !isHost,
+              chat: false,
+              leave: true,
+            }}
           />
         </LiveKitRoom>
         {isHost && (
-          <div className="max-h-[40vh] overflow-y-auto md:max-h-none md:w-80">
+          <div className="max-h-[40vh] overflow-y-auto border-t border-neutral-800 md:max-h-none md:w-80 md:border-t-0">
+            {inviteUrl && <InviteLink url={inviteUrl} />}
             <LobbyPanel callId={callId} />
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function InviteLink({ url }: { url: string }) {
+  return (
+    <div className="border-b border-neutral-800 p-4 md:border-l">
+      <div className="text-xs text-neutral-500">Invite link</div>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <code className="truncate text-sm">{url.replace(/^https?:\/\//, "")}</code>
+        <ShareButton url={url} label="Share" />
       </div>
     </div>
   );

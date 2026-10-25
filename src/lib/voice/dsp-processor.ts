@@ -1,0 +1,66 @@
+import { DSP_PRESETS, type VoicePreset } from "./presets";
+import type { VoiceProcessor } from "./types";
+
+const WORKLET_URL = "/voice/voice-shifter.js";
+
+/** Pitch and formant shifting in an AudioWorklet (see public/voice/voice-shifter.js). */
+export class DspVoiceProcessor implements VoiceProcessor {
+  private ctx: AudioContext | null = null;
+  private node: AudioWorkletNode | null = null;
+  private input: MediaStream | null = null;
+  private monitoring = false;
+
+  async start(stream: MediaStream, preset: VoicePreset) {
+    if (typeof AudioWorkletNode === "undefined") {
+      throw new Error("This browser can't disguise your voice. Try a recent Chrome, Edge, Firefox or Safari.");
+    }
+    this.input = stream;
+    const ctx = new AudioContext({ latencyHint: "interactive" });
+    this.ctx = ctx;
+    await ctx.audioWorklet.addModule(WORKLET_URL);
+
+    const source = ctx.createMediaStreamSource(stream);
+    const node = new AudioWorkletNode(ctx, "voice-shifter", {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      outputChannelCount: [1],
+    });
+    const dest = ctx.createMediaStreamDestination();
+    source.connect(node).connect(dest);
+    this.node = node;
+    this.setPreset(preset);
+
+    if (ctx.state === "suspended") await ctx.resume();
+    const track = dest.stream.getAudioTracks()[0];
+    if (!track) throw new Error("Could not create the disguised audio track");
+    return track;
+  }
+
+  setPreset(preset: VoicePreset) {
+    this.node?.port.postMessage(DSP_PRESETS[preset]);
+  }
+
+  setMonitor(on: boolean) {
+    if (!this.node || !this.ctx || on === this.monitoring) return;
+    if (on) this.node.connect(this.ctx.destination);
+    else this.node.disconnect(this.ctx.destination);
+    this.monitoring = on;
+  }
+
+  stop() {
+    this.input?.getTracks().forEach((t) => t.stop());
+    void this.ctx?.close();
+    this.ctx = null;
+    this.node = null;
+    this.input = null;
+    this.monitoring = false;
+  }
+}
+
+/** Microphone settings tuned for speech. */
+export function getMicrophone() {
+  return navigator.mediaDevices.getUserMedia({
+    audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    video: false,
+  });
+}

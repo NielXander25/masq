@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { createCall, type CreateCallState } from "@/app/dashboard/actions";
-import { VOICE_PRESETS } from "@/lib/voice-presets";
+import { PRESET_LABELS, VOICE_PRESETS } from "@/lib/voice/presets";
 
 export function NewCallForm({ canUseVoiceChanger }: { canUseVoiceChanger: boolean }) {
   const [state, action, pending] = useActionState<CreateCallState, FormData>(createCall, {});
@@ -47,7 +47,7 @@ export function NewCallForm({ canUseVoiceChanger }: { canUseVoiceChanger: boolea
           >
             {VOICE_PRESETS.map((p) => (
               <option key={p} value={p}>
-                {p}
+                {PRESET_LABELS[p]}
               </option>
             ))}
           </select>
