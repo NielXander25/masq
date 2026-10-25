@@ -3,7 +3,7 @@ import { SignOutButton } from "@/components/auth-buttons";
 import { ShareButton } from "@/components/copy-button";
 import { NewCallForm } from "@/components/new-call-form";
 import { db } from "@/lib/db";
-import { env } from "@/env";
+import { inviteUrl } from "@/lib/invite";
 import { canUse } from "@/lib/plans";
 import { requireUser } from "@/lib/session";
 
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
                 </div>
                 {c.status !== "ENDED" && (
                   <div className="flex gap-2">
-                    <ShareButton url={`${env.APP_URL}/c/${c.id}`} />
+                    <ShareButton url={inviteUrl(c)} />
                     <Link
                       href={`/call/${c.id}`}
                       className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-black hover:bg-neutral-200"
