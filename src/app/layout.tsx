@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { env } from "@/env";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,9 +13,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const description = "Host voice and video calls under any name. Every guest is identified.";
+
 export const metadata: Metadata = {
-  title: "masqq",
-  description: "Anonymous-host voice and video calls with identified guests.",
+  // Absolute URLs for link previews (WhatsApp, iMessage, Slack, …).
+  metadataBase: new URL(env.APP_URL),
+  title: { default: "masqq", template: "%s · masqq" },
+  description,
+  openGraph: { siteName: "masqq", title: "masqq", description, type: "website" },
+  twitter: { card: "summary_large_image", title: "masqq", description },
 };
 
 export default function RootLayout({
