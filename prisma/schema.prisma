@@ -158,6 +158,7 @@ model Recording {
   egressId      String        @unique
   fileKey       String? // R2 object key, never contains host identity
   durationSec   Int?
+  startedAt     DateTime? // when this file's audio starts, to line up transcripts
   status        JobStatus     @default(PENDING)
   createdAt     DateTime      @default(now())
 }

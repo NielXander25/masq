@@ -3,6 +3,10 @@ import { env } from "@/env";
 
 export const TOKEN_TTL_SECONDS = 2 * 60 * 60;
 
+export function livekitConfig() {
+  return config();
+}
+
 function config() {
   const { LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET } = env;
   if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
