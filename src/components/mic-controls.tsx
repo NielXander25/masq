@@ -60,14 +60,14 @@ export function MicButton() {
 }
 
 /** If the host requires cameras, nag a guest whose camera goes off. */
-export function CameraRequiredGuard() {
+export function CameraRequiredGuard({ alias }: { alias: string }) {
   const { localParticipant, isCameraEnabled } = useLocalParticipant();
   const state = useConnectionState();
   const [busy, setBusy] = useState(false);
   if (state !== ConnectionState.Connected || isCameraEnabled) return null;
   return (
     <div className="mx-3 mt-2 flex items-center justify-between gap-3 rounded-lg bg-amber-950 px-3 py-2 text-sm text-amber-200">
-      <span>The host requires your camera to be on.</span>
+      <span>{alias} requires your camera to be on.</span>
       <button
         disabled={busy}
         onClick={async () => {

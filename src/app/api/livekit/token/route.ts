@@ -23,7 +23,9 @@ export async function POST(req: Request) {
       joinedAt: true,
       livekitIdentity: true,
       user: { select: { name: true, email: true } },
-      call: { select: { id: true, roomName: true, status: true, hostAlias: true } },
+      call: {
+        select: { id: true, roomName: true, status: true, hostAlias: true, hostTitle: true },
+      },
     },
   });
   // Nobody gets a token unless they host the call or the host admitted them.
@@ -36,7 +38,7 @@ export async function POST(req: Request) {
         kind: "host",
         roomName: call.roomName,
         identity: participant.livekitIdentity,
-        alias: call.hostAlias,
+        alias: call.hostTitle ? `${call.hostAlias} · ${call.hostTitle}` : call.hostAlias,
       })
     : await createToken({
         kind: "guest",

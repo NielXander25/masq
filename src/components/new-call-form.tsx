@@ -26,6 +26,17 @@ export function NewCallForm({ canUseVoiceChanger }: { canUseVoiceChanger: boolea
         {fe.alias && <span className="mt-1 block text-sm text-red-400">{fe.alias[0]}</span>}
       </label>
 
+      <label className="block">
+        <span className="text-sm text-neutral-400">Title guests see (optional)</span>
+        <input
+          name="hostTitle"
+          maxLength={32}
+          placeholder="e.g. Interviewer, Counsellor, Coach"
+          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 outline-none focus:border-neutral-400"
+        />
+        {fe.hostTitle && <span className="mt-1 block text-sm text-red-400">{fe.hostTitle[0]}</span>}
+      </label>
+
       <fieldset disabled={!canUseVoiceChanger} className="space-y-2 disabled:opacity-50">
         <label className="flex items-center gap-2">
           <input

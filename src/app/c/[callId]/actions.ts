@@ -42,7 +42,7 @@ export async function requestJoin(input: unknown): Promise<RequestJoinResult> {
       },
     });
   } else if (existing.status === "DENIED") {
-    return { ok: false, error: "The host declined your request" };
+    return { ok: false, error: "Your request to join was declined" };
   } else if (existing.status === "LEFT") {
     await db.participant.update({
       where: { id: existing.id },

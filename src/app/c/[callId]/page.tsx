@@ -15,6 +15,7 @@ export default async function InvitePage({ params }: { params: Promise<{ callId:
     select: {
       hostId: true,
       hostAlias: true,
+      hostTitle: true,
       status: true,
       recordingEnabled: true,
       guestCamera: true,
@@ -36,6 +37,7 @@ export default async function InvitePage({ params }: { params: Promise<{ callId:
       <div>
         <p className="text-sm text-neutral-400">You&apos;re invited to a call with</p>
         <h1 className="mt-1 text-3xl font-semibold">{call.hostAlias}</h1>
+        {call.hostTitle && <p className="mt-1 text-neutral-300">{call.hostTitle}</p>}
         <div className="mt-2 flex flex-wrap gap-2">
           {call.recordingEnabled && (
             <span className="rounded bg-red-950 px-2 py-0.5 text-xs text-red-300">
@@ -52,7 +54,7 @@ export default async function InvitePage({ params }: { params: Promise<{ callId:
       <p className="text-sm text-neutral-400">
         Joining as <span className="text-white">{user.name}</span> ({user.email})
       </p>
-      <JoinRequest callId={callId} initialStatus={initialStatus} />
+      <JoinRequest callId={callId} alias={call.hostAlias} initialStatus={initialStatus} />
     </main>
   );
 }

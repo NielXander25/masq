@@ -115,6 +115,7 @@ model Call {
   hostId              String
   host                User          @relation("HostCalls", fields: [hostId], references: [id])
   hostAlias           String // 2–32 chars, set per call
+  hostTitle           String? // optional role shown to guests, e.g. "Interviewer"
   roomName            String        @unique
   status              CallStatus    @default(SCHEDULED)
   voiceChangerEnabled Boolean       @default(false)

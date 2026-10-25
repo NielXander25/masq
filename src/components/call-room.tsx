@@ -30,6 +30,8 @@ type Props = {
   callId: string;
   isHost: boolean;
   alias: string;
+  /** Optional role shown to guests, e.g. "Interviewer". */
+  title?: string | null;
   /** Host only. */
   inviteUrl?: string;
   /** Host only: disguise the voice with this preset. */
@@ -39,7 +41,15 @@ type Props = {
 };
 type Phase = "prejoin" | "connecting" | "in-call" | "left" | "ended" | "error";
 
-export function CallRoom({ callId, isHost, alias, inviteUrl, voicePreset, cameraRequired = false }: Props) {
+export function CallRoom({
+  callId,
+  isHost,
+  alias,
+  title,
+  inviteUrl,
+  voicePreset,
+  cameraRequired = false,
+}: Props) {
   const voiceOn = isHost && Boolean(voicePreset);
   const [phase, setPhase] = useState<Phase>("prejoin");
   const [cameraOn, setCameraOn] = useState(false);
@@ -96,6 +106,7 @@ export function CallRoom({ callId, isHost, alias, inviteUrl, voicePreset, camera
     return (
       <PreJoin
         alias={alias}
+        title={title}
         isHost={isHost}
         disguise={voiceOn}
         cameraRequired={cameraRequired}
@@ -127,7 +138,9 @@ export function CallRoom({ callId, isHost, alias, inviteUrl, voicePreset, camera
         <div className="min-w-0">
           <div className="truncate font-medium">{alias}</div>
           <div className="text-xs text-neutral-500">
-            {isHost ? "You are hosting anonymously" : "Anonymous host"}
+            {isHost
+              ? `You're hosting anonymously${title ? ` as ${title}` : ""}`
+              : `${title ? `${title} · ` : ""}Anonymous`}
           </div>
         </div>
         {isHost && (
@@ -162,7 +175,7 @@ export function CallRoom({ callId, isHost, alias, inviteUrl, voicePreset, camera
             setPhase("error");
           }}
         >
-          {cameraRequired && <CameraRequiredGuard />}
+          {cameraRequired && <CameraRequiredGuard alias={alias} />}
           <Stage />
           <RoomAudioRenderer />
           <div className="flex flex-wrap items-center justify-center gap-2 border-t border-neutral-800 p-2">

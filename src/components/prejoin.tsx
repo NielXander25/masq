@@ -7,6 +7,7 @@ import { useMicStore } from "@/lib/voice/store";
 
 type Props = {
   alias: string;
+  title?: string | null;
   isHost: boolean;
   /** Host with the voice changer on. */
   disguise: boolean;
@@ -19,7 +20,7 @@ type Props = {
  * Device check before joining. Starting the microphone here (on a tap) also
  * satisfies browsers' autoplay rules for the audio pipeline.
  */
-export function PreJoin({ alias, isHost, disguise, cameraRequired = false, onJoin }: Props) {
+export function PreJoin({ alias, title, isHost, disguise, cameraRequired = false, onJoin }: Props) {
   const { mode, setMode, processor, setProcessor } = useMicStore();
   const [mic, setMic] = useState<"idle" | "starting" | "ready" | "error">(processor ? "ready" : "idle");
   const [micError, setMicError] = useState<string | null>(null);
@@ -84,6 +85,7 @@ export function PreJoin({ alias, isHost, disguise, cameraRequired = false, onJoi
       <div>
         <p className="text-sm text-neutral-400">{isHost ? "Hosting as" : "Call with"}</p>
         <h1 className="text-3xl font-semibold">{alias}</h1>
+        {title && <p className="mt-1 text-neutral-300">{title}</p>}
       </div>
 
       {!isHost && (
@@ -91,7 +93,7 @@ export function PreJoin({ alias, isHost, disguise, cameraRequired = false, onJoi
           <div className="flex items-center justify-between">
             <h2 className="font-medium">Camera</h2>
             {cameraRequired && (
-              <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300">Required by host</span>
+              <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300">Required by {alias}</span>
             )}
           </div>
           <div className="aspect-video overflow-hidden rounded-lg bg-neutral-900">

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { aliasSchema } from "@/lib/alias";
+import { aliasSchema, hostTitleSchema } from "@/lib/alias";
 import { randomId, shortCode } from "@/lib/ids";
 import { canUse } from "@/lib/plans";
 import { requireUser } from "@/lib/session";
@@ -12,6 +12,7 @@ import { VOICE_PRESETS } from "@/lib/voice/presets";
 const createCallSchema = z
   .object({
     alias: aliasSchema,
+    hostTitle: hostTitleSchema,
     voiceChangerEnabled: z.boolean(),
     voicePreset: z.enum(VOICE_PRESETS).optional(),
     recordingEnabled: z.boolean(),
@@ -37,6 +38,7 @@ export async function createCall(
 
   const parsed = createCallSchema.safeParse({
     alias: formData.get("alias"),
+    hostTitle: formData.get("hostTitle") ?? "",
     voiceChangerEnabled: formData.get("voiceChangerEnabled") === "on",
     voicePreset: formData.get("voicePreset") || undefined,
     recordingEnabled: formData.get("recordingEnabled") === "on",
@@ -57,6 +59,7 @@ export async function createCall(
       id: shortCode(),
       hostId: user.id,
       hostAlias: input.alias,
+      hostTitle: input.hostTitle,
       roomName: randomId("room", 12),
       voiceChangerEnabled: input.voiceChangerEnabled,
       voicePreset: input.voiceChangerEnabled ? input.voicePreset : null,

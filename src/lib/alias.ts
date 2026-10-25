@@ -41,6 +41,15 @@ export function isBlockedAlias(alias: string) {
   return BLOCKED_EXACT.includes(n) || BLOCKED_SUBSTRINGS.some((s) => n.includes(s));
 }
 
+/** Optional role shown to guests next to the alias, e.g. "Interviewer". */
+export const hostTitleSchema = z
+  .string()
+  .trim()
+  .max(32, "Title must be at most 32 characters")
+  .regex(/^[\p{L}\p{N} _.'-]*$/u, "Use letters, numbers, spaces, and _ . ' - only")
+  .refine((t) => t === "" || !isBlockedAlias(t), "That title isn't allowed")
+  .transform((t) => t || null);
+
 export const aliasSchema = z
   .string()
   .trim()

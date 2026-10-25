@@ -18,6 +18,7 @@ export default async function CallPage({ params }: { params: Promise<{ callId: s
       call: {
         select: {
           hostAlias: true,
+          hostTitle: true,
           status: true,
           voiceChangerEnabled: true,
           voicePreset: true,
@@ -55,6 +56,7 @@ export default async function CallPage({ params }: { params: Promise<{ callId: s
         callId={callId}
         isHost={false}
         alias={call.hostAlias}
+        title={call.hostTitle}
         cameraRequired={call.guestCamera === "REQUIRED"}
       />
     );
@@ -66,6 +68,7 @@ export default async function CallPage({ params }: { params: Promise<{ callId: s
       callId={callId}
       isHost
       alias={call.hostAlias}
+      title={call.hostTitle}
       inviteUrl={inviteUrl({ id: callId, hostAlias: call.hostAlias })}
       voicePreset={voicePreset}
     />

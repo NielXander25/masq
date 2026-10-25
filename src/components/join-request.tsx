@@ -9,7 +9,15 @@ type Status = "NONE" | "PENDING" | "ADMITTED" | "DENIED" | "LEFT" | "ENDED";
 export const CONSENT_TEXT =
   "The host is anonymous. They will see your name and email, and this call may be recorded and transcribed";
 
-export function JoinRequest({ callId, initialStatus }: { callId: string; initialStatus: Status }) {
+export function JoinRequest({
+  callId,
+  alias,
+  initialStatus,
+}: {
+  callId: string;
+  alias: string;
+  initialStatus: Status;
+}) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>(initialStatus);
   const [consent, setConsent] = useState(false);
@@ -47,14 +55,14 @@ export function JoinRequest({ callId, initialStatus }: { callId: string; initial
       <div className="rounded-xl border border-neutral-800 p-5">
         <div className="flex items-center gap-3">
           <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-amber-400" />
-          <p>{status === "ADMITTED" ? "Admitted. Joining…" : "Waiting for the host to let you in…"}</p>
+          <p>{status === "ADMITTED" ? "Admitted. Joining…" : `Waiting for ${alias} to let you in…`}</p>
         </div>
         <p className="mt-2 text-sm text-neutral-500">Keep this page open.</p>
       </div>
     );
   }
   if (status === "DENIED") {
-    return <Notice>The host declined your request to join.</Notice>;
+    return <Notice>{alias} declined your request to join.</Notice>;
   }
   if (status === "ENDED") {
     return <Notice>This call has ended.</Notice>;
