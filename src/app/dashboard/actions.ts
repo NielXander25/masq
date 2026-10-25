@@ -1,0 +1,73 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { db } from "@/lib/db";
+import { aliasSchema } from "@/lib/alias";
+import { randomId } from "@/lib/ids";
+import { canUse } from "@/lib/plans";
+import { requireUser } from "@/lib/session";
+import { VOICE_PRESETS } from "@/lib/voice-presets";
+
+const createCallSchema = z
+  .object({
+    alias: aliasSchema,
+    voiceChangerEnabled: z.boolean(),
+    voicePreset: z.enum(VOICE_PRESETS).optional(),
+    recordingEnabled: z.boolean(),
+  })
+  .refine((v) => !v.voiceChangerEnabled || v.voicePreset, {
+    path: ["voicePreset"],
+    message: "Pick a voice preset",
+  });
+
+export type CreateCallState = { error?: string; fieldErrors?: Record<string, string[]> };
+
+export async function createCall(
+  _prev: CreateCallState,
+  formData: FormData,
+): Promise<CreateCallState> {
+  const sessionUser = await requireUser("/dashboard");
+  // Plan comes from the database, never from the client.
+  const user = await db.user.findUniqueOrThrow({
+    where: { id: sessionUser.id },
+    select: { id: true, plan: true },
+  });
+
+  const parsed = createCallSchema.safeParse({
+    alias: formData.get("alias"),
+    voiceChangerEnabled: formData.get("voiceChangerEnabled") === "on",
+    voicePreset: formData.get("voicePreset") || undefined,
+    recordingEnabled: formData.get("recordingEnabled") === "on",
+  });
+  if (!parsed.success) {
+    return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
+  }
+  const input = parsed.data;
+
+  if (input.voiceChangerEnabled && !canUse("VOICE_CHANGER", user)) {
+    return { error: "The voice changer is a PRO feature." };
+  }
+
+  const call = await db.call.create({
+    data: {
+      hostId: user.id,
+      hostAlias: input.alias,
+      roomName: randomId("room", 12),
+      voiceChangerEnabled: input.voiceChangerEnabled,
+      voicePreset: input.voiceChangerEnabled ? input.voicePreset : null,
+      recordingEnabled: input.recordingEnabled,
+      participants: {
+        create: {
+          userId: user.id,
+          isHost: true,
+          livekitIdentity: randomId("host"),
+          status: "ADMITTED",
+        },
+      },
+    },
+    select: { id: true },
+  });
+
+  redirect(`/call/${call.id}`);
+}
