@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { apiUser, jsonError } from "@/lib/api";
 import { findHostedCall } from "@/lib/calls";
 import { deleteRoom } from "@/lib/livekit";
+import { maybeTranscribe } from "@/lib/transcribe/run";
 
 // Host only: end the call for everyone.
 export async function POST(_req: Request, { params }: { params: Promise<{ callId: string }> }) {
@@ -30,7 +31,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ callId
     }),
   ]);
 
-  // Closing the room disconnects everyone still connected.
+  // Closing the room disconnects everyone still connected (and stops recording).
   await deleteRoom(call.roomName);
+  after(() => maybeTranscribe(callId));
   return NextResponse.json({ status: "ENDED" });
 }
