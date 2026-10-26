@@ -162,6 +162,7 @@ export function CallRoom({
             {isHost
               ? `You're hosting anonymously${title ? ` as ${title}` : ""}`
               : `${title ? `${title} · ` : ""}Anonymous`}
+            {isHost && !voiceOn && <span className="ml-2 text-amber-300">· Real voice (disguise off)</span>}
           </div>
         </div>
         {isHost && (

@@ -12,7 +12,8 @@ export function NewCallForm({
   canRecord: boolean;
 }) {
   const [state, action, pending] = useActionState<CreateCallState, FormData>(createCall, {});
-  const [voiceOn, setVoiceOn] = useState(false);
+  // Anonymity is the point: the disguise starts on for anyone who can use it.
+  const [voiceOn, setVoiceOn] = useState(canUseVoiceChanger);
   const fe = state.fieldErrors ?? {};
 
   return (
@@ -59,7 +60,7 @@ export function NewCallForm({
         {voiceOn && (
           <select
             name="voicePreset"
-            defaultValue="neutral-mask"
+            defaultValue="deep"
             className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2"
           >
             {VOICE_PRESETS.map((p) => (
@@ -70,6 +71,13 @@ export function NewCallForm({
           </select>
         )}
         {fe.voicePreset && <span className="block text-sm text-red-400">{fe.voicePreset[0]}</span>}
+        {!voiceOn && (
+          <p className="text-xs text-amber-300">
+            {canUseVoiceChanger
+              ? "Off: guests will hear your real voice."
+              : "Voice disguise is a PRO feature. Guests will hear your real voice."}
+          </p>
+        )}
       </fieldset>
 
       <fieldset>

@@ -179,6 +179,11 @@ export function PreJoin({ alias, title, isHost, disguise, cameraRequired = false
           Only your disguised voice is sent. Your real microphone audio never leaves this device.
         </p>
       )}
+      {isHost && !disguise && (
+        <p className="-mt-2 rounded-lg border border-amber-700 bg-amber-950 px-3 py-2 text-center text-sm text-amber-200">
+          Voice disguise is off for this call: guests will hear your real voice.
+        </p>
+      )}
       {cameraRequired && !camera && (
         <p className="-mt-2 text-center text-xs text-neutral-500">Turn your camera on to join.</p>
       )}
