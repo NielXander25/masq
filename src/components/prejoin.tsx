@@ -76,6 +76,8 @@ export function PreJoin({ alias, title, isHost, disguise, cameraRequired = false
 
   function join() {
     processor?.setMonitor(false);
+    // Phones may pause the audio engine; this tap is allowed to wake it.
+    void processor?.resume?.();
     const cameraOn = Boolean(camera);
     // LiveKit opens the camera itself once connected.
     camera?.getTracks().forEach((t) => t.stop());

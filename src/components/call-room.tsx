@@ -202,7 +202,7 @@ export function CallRoom({
           <Stage />
           <RoomAudioRenderer />
           <div className="flex flex-wrap items-center justify-center gap-2 border-t border-neutral-800 p-2">
-            <MicButton disguise={voiceOn} />
+            <MicButton disguise={voiceOn} callId={callId} />
             <ControlBar
               className="!border-0 !p-0"
               controls={{

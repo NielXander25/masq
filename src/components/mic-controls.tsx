@@ -11,8 +11,8 @@ import { useMicStore } from "@/lib/voice/store";
  * LiveKit is never asked to open the raw microphone. Otherwise LiveKit captures
  * the mic natively (best echo cancellation) and this just toggles it.
  */
-export function MicButton({ disguise }: { disguise: boolean }) {
-  return disguise ? <DisguisedMicButton /> : <NativeMicButton />;
+export function MicButton({ disguise, callId }: { disguise: boolean; callId: string }) {
+  return disguise ? <DisguisedMicButton callId={callId} /> : <NativeMicButton />;
 }
 
 function NativeMicButton() {
@@ -36,7 +36,7 @@ function NativeMicButton() {
   );
 }
 
-function DisguisedMicButton() {
+function DisguisedMicButton({ callId }: { callId: string }) {
   const room = useRoomContext();
   const state = useConnectionState();
   const track = useMicStore((s) => s.track);
@@ -67,6 +67,8 @@ function DisguisedMicButton() {
   }, [room, state, track]);
 
   async function toggle() {
+    // A tap: also wake the audio engine if the browser paused it.
+    void useMicStore.getState().processor?.resume?.();
     const p = pub.current;
     if (!p) return;
     if (p.isMuted) await p.unmute();
@@ -79,7 +81,7 @@ function DisguisedMicButton() {
   return (
     <span className="inline-flex flex-col items-center gap-1">
       <MuteToggle muted={muted} disabled={!published} onToggle={toggle} />
-      <VoiceHealthNotice muted={muted} />
+      <VoiceHealthNotice muted={muted} callId={callId} />
     </span>
   );
 }
@@ -88,8 +90,44 @@ function DisguisedMicButton() {
  * The disguise runs in the browser's audio engine. Phones can suspend it, or it
  * can fail on a device; say so instead of leaving the host silently unheard.
  */
-function VoiceHealthNotice({ muted }: { muted: boolean }) {
+function VoiceHealthNotice({ muted, callId }: { muted: boolean; callId: string }) {
   const processor = useMicStore((s) => s.processor);
+
+  // Diagnostics: report the audio engine's state a few times so problems on a
+  // particular phone show up in the server logs.
+  useEffect(() => {
+    if (!processor?.health) return;
+    let n = 0;
+    const send = () => {
+      const h = processor.health!();
+      void fetch("/api/diag", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callId,
+          event: "voice-health",
+          data: {
+            n,
+            state: h.state,
+            inLevel: h.inLevel === null ? null : +h.inLevel.toFixed(4),
+            outLevel: h.outLevel === null ? null : +h.outLevel.toFixed(4),
+            sampleRate: h.sampleRate,
+            trackState: h.trackState,
+            muted,
+            ua: navigator.userAgent.slice(0, 200),
+          },
+        }),
+        keepalive: true,
+      }).catch(() => {});
+      n++;
+    };
+    const first = setTimeout(send, 3000);
+    const timer = setInterval(() => n < 12 && send(), 10000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
+  }, [processor, callId, muted]);
   const [suspended, setSuspended] = useState(false);
   const [silentFor, setSilentFor] = useState(0);
 

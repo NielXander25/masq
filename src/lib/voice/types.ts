@@ -27,4 +27,7 @@ export type VoiceHealth = {
   inLevel: number | null;
   /** RMS of the disguised output over the last half-second. */
   outLevel: number | null;
+  sampleRate: number | null;
+  /** The published track's state: "live" or "ended". */
+  trackState: string | null;
 };

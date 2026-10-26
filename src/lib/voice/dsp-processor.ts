@@ -10,6 +10,7 @@ export class DspVoiceProcessor implements VoiceProcessor {
   private input: MediaStream | null = null;
   private monitoring = false;
   private levels: { in: number; out: number } | null = null;
+  private track: MediaStreamTrack | null = null;
 
   async start(stream: MediaStream, mode: VoiceMode) {
     if (typeof AudioWorkletNode === "undefined") {
@@ -39,6 +40,7 @@ export class DspVoiceProcessor implements VoiceProcessor {
     if (ctx.state === "suspended") await ctx.resume();
     const track = dest.stream.getAudioTracks()[0];
     if (!track) throw new Error("Could not create the disguised audio track");
+    this.track = track;
     return track;
   }
 
@@ -47,6 +49,8 @@ export class DspVoiceProcessor implements VoiceProcessor {
   }
 
   setMonitor(on: boolean) {
+    // Every tap is a chance to wake an engine the browser paused.
+    void this.resume();
     if (!this.node || !this.ctx || on === this.monitoring) return;
     if (on) this.node.connect(this.ctx.destination);
     else this.node.disconnect(this.ctx.destination);
@@ -58,6 +62,8 @@ export class DspVoiceProcessor implements VoiceProcessor {
       state: this.ctx?.state ?? "closed",
       inLevel: this.levels?.in ?? null,
       outLevel: this.levels?.out ?? null,
+      sampleRate: this.ctx?.sampleRate ?? null,
+      trackState: this.track?.readyState ?? null,
     };
   }
 
