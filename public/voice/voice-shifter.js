@@ -8,19 +8,19 @@
 //    duration and shifts the pitch.
 // 3. The spectral envelope (formants) is re-warped so formants end up shifted
 //    by `formant`, independently of pitch.
-// `robot` emits zero-phase frames at a fixed rate for a flat, buzzy voice.
+// `robot` emits zero-phase frames on every hop for a flat, buzzy voice.
 // `denoise` tracks a per-bin noise floor and turns down bins near it.
 // With no disguise and pitch = formant = 1, audio passes through exactly,
 // with only noise suppression applied.
 
 const N = 1024;
-const OSAMP = 8;
+// 4x overlap keeps the cost low enough for phones (it runs on the audio thread).
+const OSAMP = 4;
 const HA = N / OSAMP; // analysis hop
 const HALF = N / 2;
 const TWO_PI = 2 * Math.PI;
 const EPS = 1e-9;
 // Hann analysis x synthesis windows overlap-add to 3/8 of N per hop.
-const ROBOT_PERIOD = 384; // samples between robot pulses (125 Hz at 48 kHz)
 
 // Noise suppression. Per-frame rates are expressed for 4x overlap and
 // converted, so time constants don't depend on OSAMP.
@@ -33,12 +33,16 @@ const NOISE_RISE = perFrame(0.9995); // louder than that is speech: barely move
 const OVER_SUBTRACT = 2;
 const GAIN_FLOOR = 0.08; // about -22 dB
 const WARMUP_FRAMES = 12 * (OSAMP / 4);
+const NS_OPEN = 1 - perFrame(0.5);
+const NS_CLOSE = 1 - perFrame(0.85);
 
 // Stretched-signal ring buffer (must hold several frames at the largest stretch).
 const RING = 1 << 15;
 const RING_MASK = RING - 1;
 
 const princarg = (a) => a - TWO_PI * Math.round(a / TWO_PI);
+// Expected phase advance per analysis hop for each bin.
+const BIN_ADVANCE = (TWO_PI * HA) / N;
 
 class VoiceShifter extends AudioWorkletProcessor {
   constructor(options) {
@@ -57,9 +61,10 @@ class VoiceShifter extends AudioWorkletProcessor {
     this.re = new Float32Array(N);
     this.im = new Float32Array(N);
     this.mag = new Float32Array(HALF + 1);
-    this.phase = new Float32Array(HALF + 1);
-    this.prevPhase = new Float32Array(HALF + 1);
-    this.synPhase = new Float32Array(HALF + 1);
+    this.phase = new Float64Array(HALF + 1);
+    this.prevPhase = new Float64Array(HALF + 1);
+    this.synPhase = new Float64Array(HALF + 1);
+    this.peakPhase = new Float64Array(HALF + 1);
     this.env = new Float32Array(HALF + 1);
     this.tmp = new Float32Array(HALF + 1);
     this.peaks = new Int32Array(HALF + 1);
@@ -76,7 +81,12 @@ class VoiceShifter extends AudioWorkletProcessor {
     this.writeFrac = 0; // fractional carry for non-integer synthesis hops
     this.readPos = 0; // fractional read position
     this.started = false;
-    this.robotAcc = 0;
+
+    // Health report to the page: input/output levels about twice a second.
+    this.reportEvery = Math.round(sampleRate / 2);
+    this.reportCount = 0;
+    this.inEnergy = 0;
+    this.outEnergy = 0;
 
     this.window = new Float32Array(N);
     for (let k = 0; k < N; k++) this.window[k] = 0.5 - 0.5 * Math.cos((TWO_PI * k) / N);
@@ -149,21 +159,21 @@ class VoiceShifter extends AudioWorkletProcessor {
     }
   }
 
-  // Smoothed log-magnitude: two passes of a moving average (a triangle filter).
+  // Smoothed log-magnitude: two passes of a moving average (a triangle filter),
+  // each pass a running sum, so it's linear in the number of bins.
   envelope() {
     const { mag, env, tmp, envRadius: r } = this;
     for (let k = 0; k <= HALF; k++) env[k] = Math.log(mag[k] + EPS);
     for (let pass = 0; pass < 2; pass++) {
+      let sum = 0;
+      let lo = 0;
+      let hi = -1;
       for (let k = 0; k <= HALF; k++) {
-        let sum = 0;
-        let n = 0;
-        for (let j = k - r; j <= k + r; j++) {
-          if (j >= 0 && j <= HALF) {
-            sum += env[j];
-            n++;
-          }
-        }
-        tmp[k] = sum / n;
+        const wantHi = Math.min(HALF, k + r);
+        while (hi < wantHi) sum += env[++hi];
+        const wantLo = Math.max(0, k - r);
+        while (lo < wantLo) sum -= env[lo++];
+        tmp[k] = sum / (hi - lo + 1);
       }
       env.set(tmp);
     }
@@ -190,7 +200,7 @@ class VoiceShifter extends AudioWorkletProcessor {
       const g = Math.max(GAIN_FLOOR, 1 - (OVER_SUBTRACT * noise[k]) / (ps + EPS));
       // Open quickly, close slowly: avoids "musical noise" warble.
       const prev = nsGain[k];
-      nsGain[k] = g > prev ? prev + (g - prev) * (1 - perFrame(0.5)) : prev + (g - prev) * (1 - perFrame(0.85));
+      nsGain[k] = prev + (g - prev) * (g > prev ? NS_OPEN : NS_CLOSE);
     }
     this.frames++;
   }
@@ -204,13 +214,13 @@ class VoiceShifter extends AudioWorkletProcessor {
     }
     this.fft(re, im, -1);
     for (let k = 0; k <= HALF; k++) {
-      mag[k] = Math.hypot(re[k], im[k]);
+      mag[k] = Math.sqrt(re[k] * re[k] + im[k] * im[k]);
       phase[k] = Math.atan2(im[k], re[k]);
     }
     if (this.denoise) this.updateNoiseGain();
 
     const clean = this.clean;
-    // Clean voice: no stretch. Robot: frames placed on a fixed beat instead.
+    // Clean voice and robot: no stretch.
     const stretch = clean || this.robot ? 1 : this.pitch;
     const exactHop = HA * stretch + this.writeFrac;
     const hs = Math.round(exactHop); // synthesis hop for this frame
@@ -256,16 +266,21 @@ class VoiceShifter extends AudioWorkletProcessor {
           const m = mag[k];
           if (m > EPS && m > mag[k - 1] && m >= mag[k + 1]) peaks[nPeaks++] = k;
         }
-        const advance = (k) => {
-          const omega = (TWO_PI * k) / N + princarg(phase[k] - prevPhase[k] - (TWO_PI * k * HA) / N) / HA;
-          return synPhase[k] + omega * hs;
-        };
+        // Phase advance of bin k over the synthesis hop, from its true frequency.
+        const ratio = hs / HA;
+        const { peakPhase } = this;
         if (nPeaks === 0) {
-          for (let k = 0; k <= HALF; k++) synPhase[k] = advance(k);
+          for (let k = 0; k <= HALF; k++) {
+            const dev = princarg(phase[k] - prevPhase[k] - k * BIN_ADVANCE);
+            synPhase[k] = princarg(synPhase[k] + (k * BIN_ADVANCE + dev) * ratio);
+          }
         } else {
           // New peak phases first (they're read below).
-          const peakPhase = this.tmp;
-          for (let i = 0; i < nPeaks; i++) peakPhase[peaks[i]] = advance(peaks[i]);
+          for (let i = 0; i < nPeaks; i++) {
+            const k = peaks[i];
+            const dev = princarg(phase[k] - prevPhase[k] - k * BIN_ADVANCE);
+            peakPhase[k] = princarg(synPhase[k] + (k * BIN_ADVANCE + dev) * ratio);
+          }
           let j = 0;
           for (let k = 0; k <= HALF; k++) {
             while (j < nPeaks - 1 && Math.abs(peaks[j + 1] - k) < Math.abs(peaks[j] - k)) j++;
@@ -291,26 +306,26 @@ class VoiceShifter extends AudioWorkletProcessor {
     im[HALF] = 0;
     this.fft(re, im, 1);
 
-    // Robot: only emit a frame on each beat, so pulses repeat at a fixed pitch.
-    let emit = true;
     // Overlap-add density depends on the synthesis hop actually used.
-    let scale = this.gain / N / (0.375 * (N / hs));
-    if (this.robot) {
-      this.robotAcc += HA;
-      emit = this.robotAcc >= ROBOT_PERIOD;
-      if (emit) this.robotAcc -= ROBOT_PERIOD;
-      // Fewer, sparser frames: rescale to the overlap actually used.
-      scale = this.gain / N / (0.375 * (N / ROBOT_PERIOD));
-    }
-    if (emit) {
-      const { ring } = this;
-      const base = this.writePos;
-      for (let k = 0; k < N; k++) {
-        const idx = (base + k) & RING_MASK;
-        ring[idx] += window[k] * re[k] * scale;
-      }
+    const scale = this.gain / N / (0.375 * (N / hs));
+    const { ring } = this;
+    const base = this.writePos;
+    for (let k = 0; k < N; k++) {
+      const idx = (base + k) & RING_MASK;
+      ring[idx] += window[k] * re[k] * scale;
     }
     this.writePos += hs;
+  }
+
+  reset() {
+    this.ring.fill(0);
+    this.synPhase.fill(0);
+    this.prevPhase.fill(0);
+    this.firstFrame = true;
+    this.started = false;
+    this.writePos = 0;
+    this.writeFrac = 0;
+    this.readPos = 0;
   }
 
   process(inputs, outputs) {
@@ -360,7 +375,25 @@ class VoiceShifter extends AudioWorkletProcessor {
         const lag = this.writePos - this.readPos;
         if (lag > HA * 6 * Math.max(1, rate)) this.readPos = this.writePos - HA * 2 * Math.max(1, rate);
       }
+      // Never let a numeric fault silence the voice for good: reset and carry on.
+      if (y !== y || !Number.isFinite(y)) {
+        y = 0;
+        this.reset();
+      }
       output[i] = y;
+      const x = input ? input[i] : 0;
+      this.inEnergy += x * x;
+      this.outEnergy += y * y;
+      if (++this.reportCount >= this.reportEvery) {
+        this.port.postMessage({
+          type: "levels",
+          in: Math.sqrt(this.inEnergy / this.reportCount),
+          out: Math.sqrt(this.outEnergy / this.reportCount),
+        });
+        this.reportCount = 0;
+        this.inEnergy = 0;
+        this.outEnergy = 0;
+      }
     }
     for (let c = 1; c < out.length; c++) out[c].set(output);
     return true;

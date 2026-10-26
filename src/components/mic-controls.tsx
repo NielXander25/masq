@@ -76,7 +76,54 @@ function DisguisedMicButton() {
 
   if (error) return <span className="text-sm text-red-400">Microphone not sent: {error}</span>;
 
-  return <MuteToggle muted={muted} disabled={!published} onToggle={toggle} />;
+  return (
+    <span className="inline-flex flex-col items-center gap-1">
+      <MuteToggle muted={muted} disabled={!published} onToggle={toggle} />
+      <VoiceHealthNotice muted={muted} />
+    </span>
+  );
+}
+
+/**
+ * The disguise runs in the browser's audio engine. Phones can suspend it, or it
+ * can fail on a device; say so instead of leaving the host silently unheard.
+ */
+function VoiceHealthNotice({ muted }: { muted: boolean }) {
+  const processor = useMicStore((s) => s.processor);
+  const [suspended, setSuspended] = useState(false);
+  const [silentFor, setSilentFor] = useState(0);
+
+  useEffect(() => {
+    if (!processor?.health) return;
+    const timer = setInterval(() => {
+      const h = processor.health!();
+      setSuspended(h.state !== "running");
+      // Mic hears something but the disguise outputs nothing.
+      const silent = h.inLevel !== null && h.outLevel !== null && h.inLevel > 0.003 && h.outLevel < 0.0003;
+      setSilentFor((n) => (silent ? n + 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [processor]);
+
+  if (suspended) {
+    return (
+      <button
+        onClick={() => processor?.resume?.()}
+        className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-black"
+      >
+        Tap to turn your voice back on
+      </button>
+    );
+  }
+  if (!muted && silentFor >= 4) {
+    return (
+      <span className="max-w-xs text-center text-xs text-amber-300">
+        Your disguised voice isn&apos;t coming through on this device. Try leaving and rejoining, or use Chrome on
+        another phone or a computer.
+      </span>
+    );
+  }
+  return null;
 }
 
 function MuteToggle({ muted, disabled, onToggle }: { muted: boolean; disabled: boolean; onToggle: () => void }) {

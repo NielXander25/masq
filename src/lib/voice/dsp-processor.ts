@@ -1,5 +1,5 @@
 import { DSP_PRESETS, type VoiceMode } from "./presets";
-import type { VoiceProcessor } from "./types";
+import type { VoiceHealth, VoiceProcessor } from "./types";
 
 const WORKLET_URL = "/voice/voice-shifter.js";
 
@@ -9,6 +9,7 @@ export class DspVoiceProcessor implements VoiceProcessor {
   private node: AudioWorkletNode | null = null;
   private input: MediaStream | null = null;
   private monitoring = false;
+  private levels: { in: number; out: number } | null = null;
 
   async start(stream: MediaStream, mode: VoiceMode) {
     if (typeof AudioWorkletNode === "undefined") {
@@ -27,6 +28,9 @@ export class DspVoiceProcessor implements VoiceProcessor {
       // Settings apply from the very first sample, before any message arrives.
       processorOptions: DSP_PRESETS[mode],
     });
+    node.port.onmessage = (e) => {
+      if (e.data?.type === "levels") this.levels = { in: e.data.in, out: e.data.out };
+    };
     const dest = ctx.createMediaStreamDestination();
     source.connect(node).connect(dest);
     this.node = node;
@@ -47,6 +51,18 @@ export class DspVoiceProcessor implements VoiceProcessor {
     if (on) this.node.connect(this.ctx.destination);
     else this.node.disconnect(this.ctx.destination);
     this.monitoring = on;
+  }
+
+  health(): VoiceHealth {
+    return {
+      state: this.ctx?.state ?? "closed",
+      inLevel: this.levels?.in ?? null,
+      outLevel: this.levels?.out ?? null,
+    };
+  }
+
+  async resume() {
+    if (this.ctx && this.ctx.state !== "running" && this.ctx.state !== "closed") await this.ctx.resume();
   }
 
   stop() {
