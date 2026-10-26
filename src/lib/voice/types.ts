@@ -18,6 +18,8 @@ export interface VoiceProcessor {
   health?(): VoiceHealth;
   /** Restart the audio engine if the browser suspended it. */
   resume?(): Promise<void>;
+  /** Instant RMS levels (0..1) of the microphone and of the processed voice, for a meter. */
+  liveLevels?(): { input: number; output: number };
 }
 
 export type VoiceHealth = {

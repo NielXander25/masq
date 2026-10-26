@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { LevelMeter, rmsToMeter } from "@/components/level-meter";
 import { DspVoiceProcessor, getMicrophone } from "@/lib/voice/dsp-processor";
 import { PRESET_LABELS, VOICE_PRESETS } from "@/lib/voice/presets";
 import { useMicStore } from "@/lib/voice/store";
@@ -138,6 +139,16 @@ export function PreJoin({ alias, title, isHost, disguise, cameraRequired = false
                 {PRESET_LABELS[p]}
               </button>
             ))}
+          </div>
+        )}
+
+        {mic === "ready" && processor?.liveLevels && (
+          <div className="space-y-1.5">
+            <LevelMeter label="Your mic" read={() => rmsToMeter(processor.liveLevels!().input)} />
+            {disguise && (
+              <LevelMeter label="Guests hear" read={() => rmsToMeter(processor.liveLevels!().output)} />
+            )}
+            <p className="text-xs text-neutral-500">Speak: the bar{disguise ? "s" : ""} should move.</p>
           </div>
         )}
 

@@ -11,6 +11,9 @@ export class DspVoiceProcessor implements VoiceProcessor {
   private monitoring = false;
   private levels: { in: number; out: number } | null = null;
   private track: MediaStreamTrack | null = null;
+  private inAnalyser: AnalyserNode | null = null;
+  private outAnalyser: AnalyserNode | null = null;
+  private meterBuf = new Float32Array(1024);
 
   async start(stream: MediaStream, mode: VoiceMode) {
     if (typeof AudioWorkletNode === "undefined") {
@@ -34,6 +37,12 @@ export class DspVoiceProcessor implements VoiceProcessor {
     };
     const dest = ctx.createMediaStreamDestination();
     source.connect(node).connect(dest);
+    // Taps for the live level meter.
+    this.inAnalyser = ctx.createAnalyser();
+    this.outAnalyser = ctx.createAnalyser();
+    this.inAnalyser.fftSize = this.outAnalyser.fftSize = 1024;
+    source.connect(this.inAnalyser);
+    node.connect(this.outAnalyser);
     this.node = node;
     this.setPreset(mode);
 
@@ -67,6 +76,17 @@ export class DspVoiceProcessor implements VoiceProcessor {
     };
   }
 
+  liveLevels() {
+    const rms = (a: AnalyserNode | null) => {
+      if (!a) return 0;
+      a.getFloatTimeDomainData(this.meterBuf);
+      let s = 0;
+      for (const v of this.meterBuf) s += v * v;
+      return Math.sqrt(s / this.meterBuf.length);
+    };
+    return { input: rms(this.inAnalyser), output: rms(this.outAnalyser) };
+  }
+
   async resume() {
     if (this.ctx && this.ctx.state !== "running" && this.ctx.state !== "closed") await this.ctx.resume();
   }
@@ -78,6 +98,8 @@ export class DspVoiceProcessor implements VoiceProcessor {
     this.node = null;
     this.input = null;
     this.monitoring = false;
+    this.inAnalyser = null;
+    this.outAnalyser = null;
   }
 }
 

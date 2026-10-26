@@ -1,7 +1,8 @@
 "use client";
 
-import { useConnectionState, useLocalParticipant, useRoomContext } from "@livekit/components-react";
-import { ConnectionState, Track, type LocalTrackPublication } from "livekit-client";
+import { useConnectionState, useLocalParticipant, useRoomContext, useTrackVolume } from "@livekit/components-react";
+import { ConnectionState, Track, type LocalAudioTrack, type LocalTrackPublication } from "livekit-client";
+import { LevelMeter } from "@/components/level-meter";
 import { useEffect, useRef, useState } from "react";
 import { PRESET_LABELS, VOICE_PRESETS, isVoicePreset } from "@/lib/voice/presets";
 import { useMicStore } from "@/lib/voice/store";
@@ -12,7 +13,31 @@ import { useMicStore } from "@/lib/voice/store";
  * the mic natively (best echo cancellation) and this just toggles it.
  */
 export function MicButton({ disguise, callId }: { disguise: boolean; callId: string }) {
-  return disguise ? <DisguisedMicButton callId={callId} /> : <NativeMicButton />;
+  return (
+    <span className="inline-flex items-center gap-2">
+      {disguise ? <DisguisedMicButton callId={callId} /> : <NativeMicButton />}
+      <SendLevel />
+    </span>
+  );
+}
+
+/** Live level of the audio actually being sent (the disguised voice, if on). */
+function SendLevel() {
+  const { microphoneTrack, isMicrophoneEnabled } = useLocalParticipant();
+  const track = microphoneTrack?.track as LocalAudioTrack | undefined;
+  const volume = useTrackVolume(track);
+  const latest = useRef(0);
+  latest.current = volume;
+  return (
+    <span className="w-28" title="Sound being sent to the call">
+      <LevelMeter
+        label="Out"
+        labelClass="w-6"
+        dimmed={!isMicrophoneEnabled || !track}
+        read={() => Math.min(1, latest.current * 3)}
+      />
+    </span>
+  );
 }
 
 function NativeMicButton() {
