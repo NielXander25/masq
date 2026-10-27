@@ -1,10 +1,11 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { aliasSchema, hostTitleSchema } from "@/lib/alias";
 import { randomId, shortCode } from "@/lib/ids";
+import { inviteUrl } from "@/lib/invite";
 import { canUse } from "@/lib/plans";
 import { recordingConfigured } from "@/lib/recording";
 import { requireUser } from "@/lib/session";
@@ -24,7 +25,12 @@ const createCallSchema = z
     message: "Pick a voice preset",
   });
 
-export type CreateCallState = { error?: string; fieldErrors?: Record<string, string[]> };
+export type CreateCallState = {
+  error?: string;
+  fieldErrors?: Record<string, string[]>;
+  /** Set once the call exists: the link can be shared before anyone joins. */
+  created?: { callId: string; inviteUrl: string; alias: string };
+};
 
 export async function createCall(
   _prev: CreateCallState,
@@ -79,8 +85,9 @@ export async function createCall(
         },
       },
     },
-    select: { id: true },
+    select: { id: true, hostAlias: true },
   });
 
-  redirect(`/call/${call.id}`);
+  revalidatePath("/dashboard");
+  return { created: { callId: call.id, inviteUrl: inviteUrl(call), alias: call.hostAlias } };
 }
