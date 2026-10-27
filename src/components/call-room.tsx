@@ -22,6 +22,7 @@ import { useEffect, useState } from "react";
 import { JoinRequestCard, LobbyPanel, useLobby, type Lobby } from "@/components/lobby-panel";
 import { CameraRequiredGuard, MicButton, PresetSwitcher } from "@/components/mic-controls";
 import { PreJoin } from "@/components/prejoin";
+import { ReactionOverlay, ReactionTray, useReactions } from "@/components/reactions";
 import { RejoinButton } from "@/components/rejoin-button";
 import {
   CopyIcon,
@@ -31,6 +32,7 @@ import {
   PhoneOffIcon,
   ScreenShareIcon,
   ShareIcon,
+  SmileIcon,
   VideoIcon,
   VideoOffIcon,
 } from "@/components/ui/icons";
@@ -218,6 +220,8 @@ function InCall({
   const lobby = useLobby(callId, isHost);
   const [sheet, setSheet] = useState<"people" | "more" | "end" | null>(null);
   const [canScreenShare, setCanScreenShare] = useState(false);
+  const [trayOpen, setTrayOpen] = useState(false);
+  const reactions = useReactions();
   useEffect(() => setCanScreenShare(Boolean(navigator.mediaDevices?.getDisplayMedia)), []);
 
   const subtitle = isHost
@@ -230,6 +234,12 @@ function InCall({
       {/* Stage */}
       <div className="relative min-h-0 flex-1">
         <Stage alias={alias} isHost={isHost} inviteUrl={inviteUrl} />
+        <ReactionOverlay items={reactions.items} />
+        {trayOpen && (
+          <div className="absolute inset-x-0 bottom-3 z-40 flex justify-center px-3">
+            <ReactionTray onPick={reactions.react} />
+          </div>
+        )}
 
         {/* Top bar over the video */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-black/80 to-transparent px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))]">
@@ -275,6 +285,14 @@ function InCall({
             {isCameraEnabled ? <VideoIcon /> : <VideoOffIcon />}
           </RoundButton>
         )}
+        <RoundButton
+          label={trayOpen ? "Close reactions" : "Send a reaction"}
+          pressed={trayOpen}
+          tone={trayOpen ? "light" : "default"}
+          onClick={() => setTrayOpen((o) => !o)}
+        >
+          <SmileIcon />
+        </RoundButton>
         {isHost && (
           <RoundButton label="People" onClick={() => setSheet("people")} badge={lobby.waiting.length}>
             <PeopleIcon />
