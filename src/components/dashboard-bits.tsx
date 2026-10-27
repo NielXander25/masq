@@ -54,14 +54,12 @@ export function AccountMenu({
   name,
   email,
   image,
-  isAdmin,
   planLabel,
   signOut,
 }: {
   name: string;
   email: string;
   image: string | null;
-  isAdmin: boolean;
   planLabel: string;
   signOut: React.ReactNode;
 }) {
@@ -81,11 +79,6 @@ export function AccountMenu({
           </div>
         </div>
         <div className="mt-5 space-y-2">
-          {isAdmin && (
-            <a href="/admin" className="block rounded-2xl bg-neutral-800 px-4 py-3 text-center font-medium">
-              Admin dashboard
-            </a>
-          )}
           {signOut}
         </div>
       </Sheet>

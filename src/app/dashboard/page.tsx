@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SignOutButton } from "@/components/auth-buttons";
 import { AccountMenu, JoinWithLink, LocalTime, ShareLinkButton } from "@/components/dashboard-bits";
 import { Logo } from "@/components/logo";
+import { ModeSwitch } from "@/components/mode-switch";
 import { NewCallButton } from "@/components/new-call-form";
 import { ArrowInIcon, ArrowOutIcon, PlayIcon } from "@/components/ui/icons";
 import { Avatar } from "@/components/ui/primitives";
@@ -96,11 +97,11 @@ export default async function DashboardPage() {
     <main className="mx-auto min-h-dvh max-w-2xl px-4 pb-28 pt-4">
       <header className="flex items-center justify-between">
         <Logo className="text-xl" />
+        {isAdmin && <ModeSwitch current="personal" />}
         <AccountMenu
           name={user.name ?? user.email ?? "You"}
           email={user.email ?? ""}
           image={user.image ?? null}
-          isAdmin={isAdmin}
           planLabel={isAdmin ? "Admin (all features)" : `${user.plan} plan`}
           signOut={<SignOutButton />}
         />

@@ -9,8 +9,8 @@ const searchSchema = z.object({
   callbackUrl: z
     .string()
     .regex(/^\/(?!\/)/)
-    .catch("/dashboard")
-    .default("/dashboard"),
+    .catch("/start")
+    .default("/start"),
   error: z.string().optional().catch(undefined),
 });
 

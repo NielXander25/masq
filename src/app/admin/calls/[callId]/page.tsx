@@ -70,44 +70,23 @@ export default async function AdminCallDetail({ params }: { params: Promise<{ ca
 
       <section>
         <h2 className="mb-2 font-medium">Participants</h2>
-        <div className="overflow-x-auto rounded-xl border border-neutral-800">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead className="text-left text-xs text-neutral-500">
-              <tr className="border-b border-neutral-800">
-                <th className="p-3">Who</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Consented</th>
-                <th className="p-3">Joined</th>
-                <th className="p-3">Left</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-800">
-              {call.participants.map((p) => (
-                <tr key={p.id}>
-                  <td className="p-3">
-                    {p.isHost ? (
-                      <span>
-                        <span className="font-medium">{call.hostAlias}</span>{" "}
-                        <span className="text-xs text-neutral-500">host · {p.livekitIdentity}</span>
-                      </span>
-                    ) : (
-                      <span>
-                        <span className="font-medium">{p.user.name ?? "—"}</span>{" "}
-                        <span className="text-neutral-400">{p.user.email}</span>
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-3">
-                    <Badge>{p.status}</Badge>
-                  </td>
-                  <td className="p-3 text-neutral-400">{p.isHost ? "—" : fmtDateTime(p.consentedAt)}</td>
-                  <td className="p-3 text-neutral-400">{fmtDateTime(p.joinedAt)}</td>
-                  <td className="p-3 text-neutral-400">{fmtDateTime(p.leftAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul className="divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
+          {call.participants.map((p) => (
+            <li key={p.id} className="space-y-1 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">{p.isHost ? call.hostAlias : (p.user.name ?? "—")}</span>
+                <Badge>{p.status}</Badge>
+              </div>
+              <div className="break-all text-sm text-neutral-400">
+                {p.isHost ? `Host · ${p.livekitIdentity}` : p.user.email}
+              </div>
+              <div className="text-xs text-neutral-500">
+                {!p.isHost && <>Consented {fmtDateTime(p.consentedAt)} · </>}
+                Joined {fmtDateTime(p.joinedAt)} · Left {fmtDateTime(p.leftAt)}
+              </div>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section>

@@ -1,30 +1,30 @@
 import Link from "next/link";
 import { AdminNav } from "@/components/admin-nav";
 import { SignOutButton } from "@/components/auth-buttons";
-import { Logo } from "@/components/logo";
+import { LogoMark } from "@/components/logo";
+import { ModeSwitch } from "@/components/mode-switch";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const openReports = await db.report.count({ where: { status: "OPEN" } });
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <header className="mb-4 flex items-center justify-between gap-4">
+    <div className="mx-auto max-w-6xl px-4 pb-10 pt-4">
+      <header className="mb-4 flex items-center justify-between gap-3">
         <Link href="/admin" className="flex items-center gap-2">
-          <Logo className="text-lg" />
-          <span className="rounded bg-amber-500 px-1.5 py-0.5 text-xs font-medium text-black">Admin</span>
+          <LogoMark className="h-9 w-9" />
+          <span className="text-lg font-semibold">masqq</span>
         </Link>
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="text-sm text-neutral-400 hover:text-white">
-            My dashboard
-          </Link>
-          <SignOutButton />
-        </div>
+        <ModeSwitch current="admin" />
       </header>
       <AdminNav openReports={openReports} />
       <div className="mt-6">{children}</div>
+      <footer className="mt-10 flex items-center justify-between gap-3 border-t border-neutral-900 pt-4 text-sm text-neutral-500">
+        <span className="min-w-0 truncate">Signed in as {admin.email}</span>
+        <SignOutButton />
+      </footer>
     </div>
   );
 }

@@ -17,10 +17,10 @@ export default async function Home() {
       </p>
       <div>
         <Link
-          href={session?.user ? "/dashboard" : "/signin"}
+          href={session?.user ? "/start" : "/signin"}
           className="inline-block rounded-lg bg-white px-5 py-2.5 font-medium text-black hover:bg-neutral-200"
         >
-          {session?.user ? "Go to dashboard" : "Sign in"}
+          {session?.user ? "Open masqq" : "Sign in"}
         </Link>
       </div>
     </main>

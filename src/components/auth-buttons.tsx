@@ -1,6 +1,6 @@
 import { signIn, signOut } from "@/auth";
 
-export function GoogleSignInButton({ redirectTo = "/dashboard" }: { redirectTo?: string }) {
+export function GoogleSignInButton({ redirectTo = "/start" }: { redirectTo?: string }) {
   return (
     <form
       action={async () => {

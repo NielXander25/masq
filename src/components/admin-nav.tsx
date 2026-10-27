@@ -15,15 +15,15 @@ const TABS = [
 export function AdminNav({ openReports }: { openReports: number }) {
   const path = usePathname();
   return (
-    <nav className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1">
+    <nav aria-label="Admin sections" className="grid grid-cols-3 gap-1.5 sm:flex sm:gap-1">
       {TABS.map((t) => {
         const active = t.href === "/admin" ? path === "/admin" : path.startsWith(t.href);
         return (
           <Link
             key={t.href}
             href={t.href}
-            className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm ${
-              active ? "bg-white text-black" : "text-neutral-400 hover:bg-neutral-900 hover:text-white"
+            className={`flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-sm ${
+              active ? "bg-white font-medium text-black" : "bg-neutral-900 text-neutral-300 hover:text-white sm:bg-transparent"
             }`}
           >
             {t.label}
