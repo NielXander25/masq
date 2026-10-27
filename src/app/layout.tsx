@@ -13,7 +13,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const description = "Host voice and video calls under any name. Every guest is identified.";
+const description =
+  "Hosting calls anonymously, now made easy. Pick any name, disguise your voice, and always know who joins.";
 
 export const metadata: Metadata = {
   // Absolute URLs for link previews (WhatsApp, iMessage, Slack, …).

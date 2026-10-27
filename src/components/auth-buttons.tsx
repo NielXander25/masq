@@ -1,19 +1,16 @@
 import { signIn, signOut } from "@/auth";
+import { GoogleSubmit } from "@/components/google-submit";
 
 export function GoogleSignInButton({ redirectTo = "/start" }: { redirectTo?: string }) {
   return (
     <form
+      className="w-full"
       action={async () => {
         "use server";
         await signIn("google", { redirectTo });
       }}
     >
-      <button
-        type="submit"
-        className="w-full rounded-lg bg-white px-4 py-2.5 font-medium text-black transition hover:bg-neutral-200"
-      >
-        Continue with Google
-      </button>
+      <GoogleSubmit />
     </form>
   );
 }

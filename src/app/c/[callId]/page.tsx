@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { GoogleSignInButton } from "@/components/auth-buttons";
-import { LogoMark } from "@/components/logo";
+import { AuthScreen } from "@/components/brand-hero";
+import { Logo, LogoMark } from "@/components/logo";
 import { Avatar } from "@/components/ui/primitives";
 import { JoinRequest } from "@/components/join-request";
 import { db } from "@/lib/db";
@@ -21,9 +22,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!call || call.status === "ENDED") return { title: "Call invite" };
   const who = call.hostTitle ? `${call.hostAlias} (${call.hostTitle})` : call.hostAlias;
   const title = `${who} invited you to a call`;
-  const description = "Join on masqq. Sign in with Google to request to join.";
+  const description = "A private masqq call. The host stays anonymous; tap to ask to join.";
   // Setting openGraph here replaces the root one, so the image must be repeated.
-  const images = [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: "masqq" }];
+  // Bump ?v= whenever the image changes: WhatsApp caches previews by image URL.
+  const images = [{ url: "/opengraph-image.png?v=2", width: 1200, height: 630, alt: "masqq" }];
   return {
     title,
     description,
@@ -45,23 +47,28 @@ export default async function InvitePage({ params }: Params) {
     });
     if (!call) notFound();
     return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
-        <LogoMark className="h-9 w-9" />
+      <AuthScreen>
+        <Logo className="text-[17px]" />
         <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
           <Avatar name={call.hostAlias} size="h-28 w-28 text-4xl" />
-          <p className="mt-5 text-sm text-neutral-400">You&apos;re invited to a call with</p>
-          <h1 className="mt-1 text-3xl font-semibold">{call.hostAlias}</h1>
-          {call.hostTitle && <p className="mt-1 text-neutral-300">{call.hostTitle}</p>}
+          <p className="mt-5 text-[15px] text-neutral-400">You&apos;re invited to a call with</p>
+          <h1 className="mt-1 text-[28px] font-bold tracking-tight">{call.hostAlias}</h1>
+          {call.hostTitle && <p className="mt-0.5 text-[17px] text-neutral-300">{call.hostTitle}</p>}
+          <span className="mt-4 rounded-full bg-white/[0.06] px-3 py-1 text-[13px] text-neutral-300 ring-1 ring-white/10">
+            Anonymous host
+          </span>
         </div>
         {call.status === "ENDED" ? (
-          <p className="rounded-xl border border-neutral-800 p-5 text-neutral-300">This call has ended.</p>
+          <p className="w-full rounded-3xl bg-neutral-900 p-5 text-center text-neutral-300">This call has ended.</p>
         ) : (
-          <>
-            <p className="mb-3 text-center text-sm text-neutral-400">Sign in with Google to ask to join.</p>
+          <div className="w-full space-y-3 text-center">
             <GoogleSignInButton redirectTo={`/c/${segment}`} />
-          </>
+            <p className="px-4 text-[13px] leading-relaxed text-neutral-500">
+              Sign in to ask to join. The host will see your Google name and email.
+            </p>
+          </div>
         )}
-      </main>
+      </AuthScreen>
     );
   }
 

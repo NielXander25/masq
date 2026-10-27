@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { GoogleSignInButton } from "@/components/auth-buttons";
-import { LogoMark } from "@/components/logo";
+import { AuthScreen, BrandHero } from "@/components/brand-hero";
 
 const searchSchema = z.object({
   // Only allow same-site relative paths, to avoid open redirects.
@@ -14,6 +14,8 @@ const searchSchema = z.object({
   error: z.string().optional().catch(undefined),
 });
 
+export const metadata = { title: "Sign in" };
+
 export default async function SignInPage({
   searchParams,
 }: {
@@ -24,18 +26,22 @@ export default async function SignInPage({
   if (session?.user) redirect(session.user.banned ? "/suspended" : callbackUrl);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4">
-      <div>
-        <LogoMark className="mb-4 h-12 w-12" />
-        <h1 className="text-2xl font-semibold">Sign in to masqq</h1>
-        <p className="mt-1 text-sm text-neutral-400">Google sign-in only.</p>
+    <AuthScreen>
+      <div className="flex flex-1 items-center">
+        <BrandHero />
       </div>
-      {error && (
-        <p className="rounded-lg border border-red-900 bg-red-950 px-3 py-2 text-sm text-red-300">
-          Sign-in failed. Please try again.
+      <div className="w-full space-y-4 text-center">
+        {error && (
+          <p className="rounded-2xl bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            Sign-in didn&apos;t finish. Please try again.
+          </p>
+        )}
+        <GoogleSignInButton redirectTo={callbackUrl} />
+        <p className="px-4 text-[13px] leading-relaxed text-neutral-500">
+          When you host, guests only see the name you choose. When you join a call, the host sees your Google name and
+          email.
         </p>
-      )}
-      <GoogleSignInButton redirectTo={callbackUrl} />
-    </main>
+      </div>
+    </AuthScreen>
   );
 }
