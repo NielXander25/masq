@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { LevelMeter, rmsToMeter } from "@/components/level-meter";
+import { ChevronLeftIcon, MicIcon, MicOffIcon, VideoIcon, VideoOffIcon } from "@/components/ui/icons";
+import { Avatar, RoundButton } from "@/components/ui/primitives";
 import { DspVoiceProcessor, getMicrophone } from "@/lib/voice/dsp-processor";
 import { PRESET_LABELS, VOICE_PRESETS } from "@/lib/voice/presets";
 import { useMicStore } from "@/lib/voice/store";
@@ -18,7 +21,7 @@ type Props = {
 };
 
 /**
- * Device check before joining. Starting the microphone here (on a tap) also
+ * Meet-style "green room". Starting the microphone here (on a tap) also
  * satisfies browsers' autoplay rules for the audio pipeline.
  */
 export function PreJoin({ alias, title, isHost, disguise, cameraRequired = false, onJoin }: Props) {
@@ -88,118 +91,129 @@ export function PreJoin({ alias, title, isHost, disguise, cameraRequired = false
   const canJoin = mic === "ready" && (!cameraRequired || camera);
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-5 px-4 py-8">
-      <div>
-        <p className="text-sm text-neutral-400">{isHost ? "Hosting as" : "Call with"}</p>
-        <h1 className="text-3xl font-semibold">{alias}</h1>
-        {title && <p className="mt-1 text-neutral-300">{title}</p>}
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+      <header className="flex items-center gap-2">
+        <Link href="/dashboard" aria-label="Back" className="-ml-2 rounded-full p-2 text-neutral-300 hover:bg-neutral-900">
+          <ChevronLeftIcon />
+        </Link>
+        <div className="min-w-0">
+          <p className="text-xs text-neutral-400">{isHost ? "Hosting as" : "Call with"}</p>
+          <h1 className="truncate text-lg font-semibold leading-tight">
+            {alias}
+            {title && <span className="ml-2 text-sm font-normal text-neutral-400">{title}</span>}
+          </h1>
+        </div>
+      </header>
+
+      {/* Preview */}
+      <div className="relative mt-4 aspect-[3/4] w-full overflow-hidden rounded-3xl bg-neutral-900 sm:aspect-video">
+        {camera ? (
+          <video ref={video} autoPlay muted playsInline className="h-full w-full -scale-x-100 object-cover" />
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-neutral-400">
+            <Avatar name={alias} size="h-24 w-24 text-3xl" />
+            <span className="text-sm">
+              {isHost ? "Your camera stays off" : cameraRequired ? "Camera is required for this call" : "Camera is off"}
+            </span>
+          </div>
+        )}
+        {cameraRequired && (
+          <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white">
+            Camera required by {alias}
+          </span>
+        )}
+        <div className="absolute inset-x-0 bottom-4 flex justify-center gap-4">
+          {mic === "ready" ? (
+            <RoundButton label="Microphone on" pressed>
+              <MicIcon />
+            </RoundButton>
+          ) : (
+            <RoundButton
+              label="Turn on microphone"
+              tone="off"
+              onClick={startMic}
+              disabled={mic === "starting"}
+              className={mic === "idle" ? "animate-pulse" : ""}
+            >
+              <MicOffIcon />
+            </RoundButton>
+          )}
+          {!isHost && (
+            <RoundButton label={camera ? "Turn camera off" : "Turn camera on"} tone={camera ? "default" : "off"} onClick={toggleCamera}>
+              {camera ? <VideoIcon /> : <VideoOffIcon />}
+            </RoundButton>
+          )}
+        </div>
       </div>
 
-      {!isHost && (
-        <section className="space-y-3 rounded-xl border border-neutral-800 p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-medium">Camera</h2>
-            {cameraRequired && (
-              <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300">Required by {alias}</span>
-            )}
-          </div>
-          <div className="aspect-video overflow-hidden rounded-lg bg-neutral-900">
-            {camera ? (
-              <video ref={video} autoPlay muted playsInline className="h-full w-full -scale-x-100 object-cover" />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-neutral-500">Camera off</div>
-            )}
-          </div>
-          <button
-            onClick={toggleCamera}
-            className="w-full rounded-lg border border-neutral-700 px-4 py-2 text-sm hover:bg-neutral-800"
-          >
-            {camera ? "Turn camera off" : "Turn camera on"}
-          </button>
-          {camError && <p className="text-sm text-red-400">{camError}</p>}
-        </section>
-      )}
-
-      <section className="space-y-3 rounded-xl border border-neutral-800 p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-medium">{disguise ? "Your disguised voice" : "Microphone"}</h2>
-          <span className="text-xs text-neutral-500">{disguise ? "Noise reduction on" : "Echo & noise cancelling on"}</span>
-        </div>
-
-        {disguise && (
-          <div className="grid grid-cols-2 gap-2">
-            {VOICE_PRESETS.map((p) => (
-              <button
-                key={p}
-                onClick={() => setMode(p)}
-                className={`rounded-lg border px-3 py-2 text-sm ${
-                  p === mode ? "border-white bg-white text-black" : "border-neutral-700 hover:bg-neutral-800"
-                }`}
-              >
-                {PRESET_LABELS[p]}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {mic === "ready" && processor?.liveLevels && (
-          <div className="space-y-1.5">
-            <LevelMeter label="Your mic" read={() => rmsToMeter(processor.liveLevels!().input)} />
-            {disguise && (
-              <LevelMeter label="Guests hear" read={() => rmsToMeter(processor.liveLevels!().output)} />
-            )}
-            <p className="text-xs text-neutral-500">Speak: the bar{disguise ? "s" : ""} should move.</p>
-          </div>
-        )}
-
-        {mic === "ready" ? (
-          <button
-            onClick={toggleMonitor}
-            className="w-full rounded-lg border border-neutral-700 px-4 py-2 text-sm hover:bg-neutral-800"
-          >
-            {monitor ? "Stop hearing myself" : "Hear myself"}
-          </button>
-        ) : (
-          <button
-            onClick={startMic}
-            disabled={mic === "starting"}
-            className="w-full rounded-lg border border-neutral-700 px-4 py-2 text-sm hover:bg-neutral-800 disabled:opacity-50"
-          >
-            {mic === "starting" ? "Starting microphone…" : "Turn on microphone"}
-          </button>
-        )}
-        {monitor && <p className="text-xs text-neutral-500">Use headphones, or you&apos;ll hear feedback.</p>}
-        {noEchoCancel && (
-          <p className="text-xs text-amber-300">
-            This browser isn&apos;t cancelling echo. Please use headphones.
+      {/* Mic status, levels, voice */}
+      <section className="mt-4 space-y-3">
+        {mic !== "ready" && (
+          <p className="text-center text-sm text-neutral-300">
+            {mic === "starting" ? "Starting microphone…" : "Tap the microphone to turn it on"}
           </p>
         )}
-        <p className="text-xs text-neutral-500">
-          Tip: headphones give the clearest sound. Keep other devices in the call out of the room to avoid echo.
-        </p>
+        {mic === "ready" && processor?.liveLevels && (
+          <div className="space-y-1.5 rounded-2xl bg-neutral-900 p-3">
+            <LevelMeter label="Your mic" read={() => rmsToMeter(processor.liveLevels!().input)} />
+            {disguise && <LevelMeter label="Guests hear" read={() => rmsToMeter(processor.liveLevels!().output)} />}
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-xs text-neutral-500">
+                {disguise ? "Noise reduction on" : "Echo & noise cancelling on"}
+              </span>
+              <button onClick={toggleMonitor} className={`rounded-full px-3 py-1 text-xs ${monitor ? "bg-white text-black" : "bg-neutral-800"}`}>
+                {monitor ? "Stop hearing myself" : "Hear myself"}
+              </button>
+            </div>
+            {monitor && <p className="text-xs text-neutral-500">Use headphones, or you&apos;ll hear feedback.</p>}
+          </div>
+        )}
+
+        {disguise && (
+          <div>
+            <p className="mb-2 text-xs text-neutral-400">Your disguised voice</p>
+            <div className="flex flex-wrap gap-2">
+              {VOICE_PRESETS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setMode(p)}
+                  className={`rounded-full px-3.5 py-1.5 text-sm ${p === mode ? "bg-white text-black" : "bg-neutral-800 text-neutral-200"}`}
+                >
+                  {PRESET_LABELS[p]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isHost && !disguise && (
+          <p className="rounded-2xl border border-amber-700 bg-amber-950 px-3 py-2 text-center text-sm text-amber-200">
+            Voice disguise is off for this call: guests will hear your real voice.
+          </p>
+        )}
+        {noEchoCancel && (
+          <p className="text-xs text-amber-300">This browser isn&apos;t cancelling echo. Please use headphones.</p>
+        )}
         {micError && <p className="text-sm text-red-400">{micError}</p>}
+        {camError && <p className="text-sm text-red-400">{camError}</p>}
       </section>
 
-      <button
-        onClick={join}
-        disabled={!canJoin}
-        className="w-full rounded-lg bg-white px-4 py-2.5 font-medium text-black hover:bg-neutral-200 disabled:opacity-40"
-      >
-        Join call
-      </button>
-      {disguise && (
-        <p className="-mt-2 text-center text-xs text-neutral-500">
-          Only your disguised voice is sent. Your real microphone audio never leaves this device.
+      <div className="mt-auto space-y-2 pt-5">
+        <button
+          onClick={join}
+          disabled={!canJoin}
+          className="w-full rounded-full bg-green-500 px-4 py-4 text-lg font-semibold text-black transition hover:bg-green-400 disabled:bg-neutral-800 disabled:text-neutral-500"
+        >
+          {isHost ? "Start call" : "Join now"}
+        </button>
+        <p className="text-center text-xs text-neutral-500">
+          {disguise
+            ? "Only your disguised voice is sent. Your real microphone audio never leaves this device."
+            : cameraRequired && !camera
+              ? "Turn your camera on to join."
+              : "Tip: headphones give the clearest sound."}
         </p>
-      )}
-      {isHost && !disguise && (
-        <p className="-mt-2 rounded-lg border border-amber-700 bg-amber-950 px-3 py-2 text-center text-sm text-amber-200">
-          Voice disguise is off for this call: guests will hear your real voice.
-        </p>
-      )}
-      {cameraRequired && !camera && (
-        <p className="-mt-2 text-center text-xs text-neutral-500">Turn your camera on to join.</p>
-      )}
+      </div>
     </main>
   );
 }

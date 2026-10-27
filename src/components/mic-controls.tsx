@@ -2,8 +2,8 @@
 
 import { useConnectionState, useLocalParticipant, useRoomContext, useTrackVolume } from "@livekit/components-react";
 import { ConnectionState, Track, type LocalAudioTrack, type LocalTrackPublication } from "livekit-client";
-import { LevelMeter } from "@/components/level-meter";
 import { useEffect, useRef, useState } from "react";
+import { MicIcon, MicOffIcon } from "@/components/ui/icons";
 import { PRESET_LABELS, VOICE_PRESETS, isVoicePreset } from "@/lib/voice/presets";
 import { useMicStore } from "@/lib/voice/store";
 
@@ -13,31 +13,14 @@ import { useMicStore } from "@/lib/voice/store";
  * the mic natively (best echo cancellation) and this just toggles it.
  */
 export function MicButton({ disguise, callId }: { disguise: boolean; callId: string }) {
-  return (
-    <span className="inline-flex items-center gap-2">
-      {disguise ? <DisguisedMicButton callId={callId} /> : <NativeMicButton />}
-      <SendLevel />
-    </span>
-  );
+  return disguise ? <DisguisedMicButton callId={callId} /> : <NativeMicButton />;
 }
 
-/** Live level of the audio actually being sent (the disguised voice, if on). */
-function SendLevel() {
-  const { microphoneTrack, isMicrophoneEnabled } = useLocalParticipant();
+/** Level (0..1) of the audio actually being sent: the disguised voice, if on. */
+function useSendLevel() {
+  const { microphoneTrack } = useLocalParticipant();
   const track = microphoneTrack?.track as LocalAudioTrack | undefined;
-  const volume = useTrackVolume(track);
-  const latest = useRef(0);
-  latest.current = volume;
-  return (
-    <span className="w-28" title="Sound being sent to the call">
-      <LevelMeter
-        label="Out"
-        labelClass="w-6"
-        dimmed={!isMicrophoneEnabled || !track}
-        read={() => Math.min(1, latest.current * 3)}
-      />
-    </span>
-  );
+  return useTrackVolume(track);
 }
 
 function NativeMicButton() {
@@ -104,10 +87,10 @@ function DisguisedMicButton({ callId }: { callId: string }) {
   if (error) return <span className="text-sm text-red-400">Microphone not sent: {error}</span>;
 
   return (
-    <span className="inline-flex flex-col items-center gap-1">
+    <>
       <MuteToggle muted={muted} disabled={!published} onToggle={toggle} />
       <VoiceHealthNotice muted={muted} callId={callId} />
-    </span>
+    </>
   );
 }
 
@@ -172,7 +155,7 @@ function VoiceHealthNotice({ muted, callId }: { muted: boolean; callId: string }
     return (
       <button
         onClick={() => processor?.resume?.()}
-        className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-black"
+        className="fixed inset-x-4 bottom-28 z-40 mx-auto max-w-sm rounded-2xl bg-amber-400 px-4 py-3 text-sm font-semibold text-black shadow-xl"
       >
         Tap to turn your voice back on
       </button>
@@ -180,27 +163,48 @@ function VoiceHealthNotice({ muted, callId }: { muted: boolean; callId: string }
   }
   if (!muted && silentFor >= 4) {
     return (
-      <span className="max-w-xs text-center text-xs text-amber-300">
+      <p className="fixed inset-x-4 bottom-28 z-40 mx-auto max-w-sm rounded-2xl bg-neutral-900 px-4 py-3 text-center text-sm text-amber-300 shadow-xl ring-1 ring-amber-700">
         Your disguised voice isn&apos;t coming through on this device. Try leaving and rejoining, or use Chrome on
         another phone or a computer.
-      </span>
+      </p>
     );
   }
   return null;
 }
 
 function MuteToggle({ muted, disabled, onToggle }: { muted: boolean; disabled: boolean; onToggle: () => void }) {
+  const level = useSendLevel();
+  const ring = useRef<HTMLSpanElement>(null);
+  const latest = useRef(0);
+  latest.current = muted ? 0 : level;
+  // Animate the ring outside React renders.
+  useEffect(() => {
+    let frame = 0;
+    let shown = 0;
+    const tick = () => {
+      const v = Math.min(1, latest.current * 3);
+      shown = v > shown ? v : shown * 0.85 + v * 0.15;
+      if (ring.current) ring.current.style.boxShadow = `0 0 0 ${(shown * 10).toFixed(1)}px rgba(74, 222, 128, ${(0.25 + shown * 0.5).toFixed(2)})`;
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
   return (
-    <button
-      onClick={onToggle}
-      disabled={disabled}
-      aria-pressed={muted}
-      aria-label={muted ? "Unmute microphone" : "Mute microphone"}
-      className={`lk-button flex items-center gap-2 ${muted ? "!bg-red-600 !text-white" : ""}`}
-    >
-      {muted ? <MicOffIcon /> : <MicIcon />}
-      <span>{muted ? "Unmute" : "Mute"}</span>
-    </button>
+    <span ref={ring} className="rounded-full transition-[box-shadow] duration-75">
+      <button
+        onClick={onToggle}
+        disabled={disabled}
+        aria-pressed={muted}
+        aria-label={muted ? "Unmute microphone" : "Mute microphone"}
+        title={muted ? "Unmute" : "Mute"}
+        className={`flex h-12 w-12 items-center justify-center rounded-full transition disabled:opacity-40 sm:h-14 sm:w-14 ${
+          muted ? "bg-red-500/90 text-white" : "bg-neutral-800 text-white hover:bg-neutral-700"
+        }`}
+      >
+        {muted ? <MicOffIcon /> : <MicIcon />}
+      </button>
+    </span>
   );
 }
 
@@ -246,23 +250,5 @@ export function PresetSwitcher() {
         </option>
       ))}
     </select>
-  );
-}
-
-function MicIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <rect x="9" y="2" width="6" height="12" rx="3" />
-      <path d="M5 10a7 7 0 0 0 14 0M12 17v5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function MicOffIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M9 9v1a3 3 0 0 0 5.1 2.1M15 9.3V5a3 3 0 0 0-5.9-.7" />
-      <path d="M5 10a7 7 0 0 0 11.4 5.4M19 10a7 7 0 0 1-.6 2.8M12 17v5M3 3l18 18" strokeLinecap="round" />
-    </svg>
   );
 }

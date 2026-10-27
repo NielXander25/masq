@@ -3,27 +3,38 @@
 import "@livekit/components-styles";
 import {
   ConnectionQualityIndicator,
-  ControlBar,
   LiveKitRoom,
   ParticipantName,
-  ParticipantPlaceholder,
   ParticipantTile,
   RoomAudioRenderer,
-  ScreenShareIcon,
   TrackMutedIndicator,
   VideoTrack,
   isTrackReference,
+  useConnectionState,
+  useLocalParticipant,
+  useRoomContext,
   useTracks,
   type TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
-import { DisconnectReason, Track } from "livekit-client";
+import { ConnectionState, DisconnectReason, Track } from "livekit-client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ShareButton } from "@/components/copy-button";
-import { LobbyPanel } from "@/components/lobby-panel";
+import { JoinRequestCard, LobbyPanel, useLobby, type Lobby } from "@/components/lobby-panel";
 import { CameraRequiredGuard, MicButton, PresetSwitcher } from "@/components/mic-controls";
 import { PreJoin } from "@/components/prejoin";
 import { RejoinButton } from "@/components/rejoin-button";
+import {
+  CopyIcon,
+  LinkIcon,
+  MoreIcon,
+  PeopleIcon,
+  PhoneOffIcon,
+  ScreenShareIcon,
+  ShareIcon,
+  VideoIcon,
+  VideoOffIcon,
+} from "@/components/ui/icons";
+import { Avatar, RoundButton, Sheet } from "@/components/ui/primitives";
 import type { VoicePreset } from "@/lib/voice/presets";
 import { useMicStore } from "@/lib/voice/store";
 
@@ -92,7 +103,6 @@ export function CallRoom({
   }, [callId, phase]);
 
   async function endCall() {
-    if (!confirm("End the call for everyone?")) return;
     await fetch(`/api/calls/${callId}/end`, { method: "POST" });
     setPhase("ended");
   }
@@ -132,7 +142,7 @@ export function CallRoom({
         {isHost ? (
           <button
             onClick={() => location.reload()}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black hover:bg-neutral-200"
+            className="rounded-full bg-white px-6 py-3 font-semibold text-black hover:bg-neutral-200"
           >
             Rejoin call
           </button>
@@ -143,103 +153,210 @@ export function CallRoom({
     );
   }
   if (phase === "error") return <Message title={error ?? "Something went wrong."} />;
-  if (!conn) return <Message title="Connecting…" />;
+  if (!conn) return <Message title="Connecting…" spinner />;
 
   return (
-    <div className="flex h-dvh flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 px-4 py-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="truncate font-medium">{alias}</span>
-            {recording && (
-              <span className="flex shrink-0 items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-xs font-medium text-white">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-                Recording
-              </span>
-            )}
+    <LiveKitRoom
+      data-lk-theme="default"
+      className="bg-black"
+      token={conn.token}
+      serverUrl={conn.serverUrl}
+      connect
+      // Disguised host: LiveKit never opens the real microphone; MicButton
+      // publishes the disguised track. Everyone else: LiveKit's native mic,
+      // with the browser's echo cancellation and noise suppression.
+      audio={voiceOn ? false : { echoCancellation: true, noiseSuppression: true, autoGainControl: true }}
+      video={!isHost && cameraOn}
+      // The host's media only ever goes through TURN, so guests never see their IP.
+      connectOptions={isHost ? { rtcConfig: { iceTransportPolicy: "relay" } } : undefined}
+      onDisconnected={onDisconnected}
+      onError={(e) => {
+        setError(e.message);
+        setPhase("error");
+      }}
+    >
+      <InCall
+        callId={callId}
+        isHost={isHost}
+        alias={alias}
+        title={title}
+        recording={recording}
+        inviteUrl={inviteUrl}
+        voiceOn={voiceOn}
+        cameraRequired={cameraRequired}
+        onEndForEveryone={endCall}
+      />
+      <RoomAudioRenderer />
+    </LiveKitRoom>
+  );
+}
+
+function InCall({
+  callId,
+  isHost,
+  alias,
+  title,
+  recording,
+  inviteUrl,
+  voiceOn,
+  cameraRequired,
+  onEndForEveryone,
+}: {
+  callId: string;
+  isHost: boolean;
+  alias: string;
+  title?: string | null;
+  recording: boolean;
+  inviteUrl?: string;
+  voiceOn: boolean;
+  cameraRequired: boolean;
+  onEndForEveryone: () => Promise<void>;
+}) {
+  const room = useRoomContext();
+  const state = useConnectionState();
+  const { localParticipant, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
+  const lobby = useLobby(callId, isHost);
+  const [sheet, setSheet] = useState<"people" | "more" | "end" | null>(null);
+  const [canScreenShare, setCanScreenShare] = useState(false);
+  useEffect(() => setCanScreenShare(Boolean(navigator.mediaDevices?.getDisplayMedia)), []);
+
+  const subtitle = isHost
+    ? `You're hosting anonymously${title ? ` as ${title}` : ""}`
+    : `${title ? `${title} · ` : ""}Anonymous`;
+
+  return (
+    // Our own full-screen frame: LiveKit's room styles don't lay out children as flex.
+    <div className="fixed inset-0 flex flex-col bg-black text-white">
+      {/* Stage */}
+      <div className="relative min-h-0 flex-1">
+        <Stage alias={alias} isHost={isHost} inviteUrl={inviteUrl} />
+
+        {/* Top bar over the video */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-black/80 to-transparent px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="truncate text-base font-semibold">{alias}</span>
+                {recording && (
+                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                    REC
+                  </span>
+                )}
+              </div>
+              <div className="truncate text-xs text-neutral-300">
+                {subtitle}
+                {isHost && !voiceOn && <span className="ml-1 text-amber-300">· Real voice (disguise off)</span>}
+              </div>
+            </div>
+            <CallTimer running={state === ConnectionState.Connected} />
           </div>
-          <div className="text-xs text-neutral-500">
-            {isHost
-              ? `You're hosting anonymously${title ? ` as ${title}` : ""}`
-              : `${title ? `${title} · ` : ""}Anonymous`}
-            {isHost && !voiceOn && <span className="ml-2 text-amber-300">· Real voice (disguise off)</span>}
-          </div>
+          {state === ConnectionState.Reconnecting && (
+            <p className="mt-2 inline-block rounded-full bg-amber-400 px-3 py-1 text-xs font-semibold text-black">Reconnecting…</p>
+          )}
+          {cameraRequired && <div className="pointer-events-auto"><CameraRequiredGuard alias={alias} /></div>}
+          {isHost && (
+            <div className="pointer-events-none mt-3">
+              <JoinRequestCard lobby={lobby} />
+            </div>
+          )}
         </div>
-        {isHost && (
-          <div className="flex items-center gap-2">
-            {voiceOn && <PresetSwitcher />}
-            <button
-              onClick={endCall}
-              className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500"
-            >
-              End call
-            </button>
-          </div>
-        )}
-      </header>
+      </div>
 
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <LiveKitRoom
-          data-lk-theme="default"
-          className="flex min-h-[50vh] flex-1 flex-col"
-          token={conn.token}
-          serverUrl={conn.serverUrl}
-          connect
-          // Disguised host: LiveKit never opens the real microphone; MicButton
-          // publishes the disguised track. Everyone else: LiveKit's native mic,
-          // with the browser's echo cancellation and noise suppression.
-          audio={voiceOn ? false : { echoCancellation: true, noiseSuppression: true, autoGainControl: true }}
-          video={!isHost && cameraOn}
-          // The host's media only ever goes through TURN, so guests never see their IP.
-          connectOptions={isHost ? { rtcConfig: { iceTransportPolicy: "relay" } } : undefined}
-          onDisconnected={onDisconnected}
-          onError={(e) => {
-            setError(e.message);
-            setPhase("error");
-          }}
+      {/* Bottom controls, Meet / WhatsApp style */}
+      <div className="z-20 flex items-center justify-center gap-3 bg-black px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:gap-4">
+        <MicButton disguise={voiceOn} callId={callId} />
+        {!isHost && !cameraRequired && (
+          <RoundButton
+            label={isCameraEnabled ? "Turn camera off" : "Turn camera on"}
+            tone={isCameraEnabled ? "default" : "off"}
+            onClick={() => localParticipant.setCameraEnabled(!isCameraEnabled)}
+          >
+            {isCameraEnabled ? <VideoIcon /> : <VideoOffIcon />}
+          </RoundButton>
+        )}
+        {isHost && (
+          <RoundButton label="People" onClick={() => setSheet("people")} badge={lobby.waiting.length}>
+            <PeopleIcon />
+          </RoundButton>
+        )}
+        {(isHost || canScreenShare) && (
+          <RoundButton label="More options" onClick={() => setSheet("more")}>
+            <MoreIcon />
+          </RoundButton>
+        )}
+        <button
+          onClick={() => (isHost ? setSheet("end") : room.disconnect())}
+          aria-label={isHost ? "Hang up" : "Leave call"}
+          title={isHost ? "Hang up" : "Leave call"}
+          className="flex h-12 w-16 items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-500 sm:h-14 sm:w-20"
         >
-          {cameraRequired && <CameraRequiredGuard alias={alias} />}
-          <Stage />
-          <RoomAudioRenderer />
-          <div className="flex flex-wrap items-center justify-center gap-2 border-t border-neutral-800 p-2">
-            <MicButton disguise={voiceOn} callId={callId} />
-            <ControlBar
-              className="!border-0 !p-0"
-              controls={{
-                microphone: false,
-                camera: !isHost && !cameraRequired,
-                screenShare: !isHost,
-                chat: false,
-                leave: true,
+          <PhoneOffIcon />
+        </button>
+      </div>
+
+      <Sheet open={sheet === "people"} onClose={() => setSheet(null)} title="People">
+        {inviteUrl && <InviteLink url={inviteUrl} alias={alias} />}
+        <div className="mt-5">
+          <LobbyPanel lobby={lobby} />
+        </div>
+      </Sheet>
+
+      <Sheet open={sheet === "more"} onClose={() => setSheet(null)} title="More">
+        <div className="space-y-4">
+          {isHost && voiceOn && (
+            <div className="flex items-center justify-between gap-3">
+              <span>Voice preset</span>
+              <PresetSwitcher />
+            </div>
+          )}
+          {isHost && inviteUrl && <InviteLink url={inviteUrl} alias={alias} />}
+          {!isHost && canScreenShare && (
+            <button
+              onClick={() => {
+                void localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
+                setSheet(null);
               }}
-            />
-          </div>
-        </LiveKitRoom>
-        {isHost && (
-          <div className="max-h-[40vh] overflow-y-auto border-t border-neutral-800 md:max-h-none md:w-80 md:border-t-0">
-            {inviteUrl && <InviteLink url={inviteUrl} />}
-            <LobbyPanel callId={callId} />
-          </div>
-        )}
-      </div>
+              className="flex w-full items-center gap-3 rounded-2xl bg-neutral-800 px-4 py-3"
+            >
+              <ScreenShareIcon className="h-5 w-5" />
+              {isScreenShareEnabled ? "Stop sharing screen" : "Share screen"}
+            </button>
+          )}
+        </div>
+      </Sheet>
+
+      <Sheet open={sheet === "end"} onClose={() => setSheet(null)} title="Leave the call?">
+        <div className="space-y-2">
+          <button
+            onClick={async () => {
+              setSheet(null);
+              await onEndForEveryone();
+            }}
+            className="w-full rounded-full bg-red-600 px-4 py-3.5 font-semibold text-white hover:bg-red-500"
+          >
+            End call for everyone
+          </button>
+          <button
+            onClick={() => room.disconnect()}
+            className="w-full rounded-full bg-neutral-800 px-4 py-3.5 font-semibold hover:bg-neutral-700"
+          >
+            Just leave (you can rejoin)
+          </button>
+          <button onClick={() => setSheet(null)} className="w-full py-2 text-sm text-neutral-400">
+            Cancel
+          </button>
+        </div>
+      </Sheet>
     </div>
   );
 }
 
-function InviteLink({ url }: { url: string }) {
-  return (
-    <div className="border-b border-neutral-800 p-4 md:border-l">
-      <div className="text-xs text-neutral-500">Invite link</div>
-      <div className="mt-1 flex items-center justify-between gap-2">
-        <code className="truncate text-sm">{url.replace(/^https?:\/\//, "")}</code>
-        <ShareButton url={url} label="Share" />
-      </div>
-    </div>
-  );
-}
-
-/** Every participant on screen at once (no paging), stacked on narrow screens. */
-function Stage() {
+/**
+ * WhatsApp-style layout: alone, you fill the screen; with one other person,
+ * they fill it and you're a small picture-in-picture; with more, a grid.
+ */
+function Stage({ alias, isHost, inviteUrl }: { alias: string; isHost: boolean; inviteUrl?: string }) {
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -247,33 +364,75 @@ function Stage() {
     ],
     { onlySubscribed: false },
   );
-  const n = tracks.length;
-  const cols =
-    n <= 1
-      ? "grid-cols-1"
-      : n === 2
-        ? "grid-cols-1 sm:grid-cols-2"
-        : n <= 4
-          ? "grid-cols-2"
-          : "grid-cols-2 md:grid-cols-3";
+  const local = tracks.filter((t) => t.participant.isLocal && t.source === Track.Source.Camera);
+  const others = tracks.filter((t) => !(t.participant.isLocal && t.source === Track.Source.Camera));
+  const key = (t: TrackReferenceOrPlaceholder) => `${t.participant.identity}:${t.source}`;
+
+  if (others.length === 0) {
+    return (
+      <div className="absolute inset-0">
+        {local[0] && <CallTile trackRef={local[0]} className="h-full w-full" />}
+        <div className="absolute inset-x-4 bottom-6 z-10 mx-auto max-w-sm rounded-3xl bg-neutral-900/90 p-4 text-center shadow-xl ring-1 ring-white/10 backdrop-blur">
+          <p className="font-medium">Waiting for others to join</p>
+          {isHost && inviteUrl ? (
+            <div className="mt-3">
+              <InviteLink url={inviteUrl} alias={alias} compact />
+            </div>
+          ) : (
+            <p className="mt-1 text-sm text-neutral-400">{alias} will be here soon.</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (others.length === 1) {
+    return (
+      <div className="absolute inset-0">
+        <CallTile trackRef={others[0]} className="h-full w-full" />
+        {local[0] && (
+          <div className="absolute bottom-4 right-4 z-10 aspect-[3/4] w-28 overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/20 sm:w-40">
+            <CallTile trackRef={local[0]} className="h-full w-full" small />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const all = [...others, ...local];
+  const cols = all.length <= 4 ? "grid-cols-2" : "grid-cols-2 md:grid-cols-3";
   return (
-    <div className={`grid min-h-0 flex-1 auto-rows-fr gap-2 overflow-y-auto p-2 ${cols}`}>
-      {tracks.map((t) => (
-        <CallTile key={`${t.participant.identity}:${t.source}`} trackRef={t} />
+    <div className={`absolute inset-0 grid auto-rows-fr gap-1.5 overflow-y-auto p-1.5 pt-20 ${cols}`}>
+      {all.map((t) => (
+        <CallTile key={key(t)} trackRef={t} className="min-h-[160px] rounded-2xl" />
       ))}
     </div>
   );
 }
 
-/** LiveKit's tile, but the mic icon is always shown: on, or red when muted. */
-function CallTile({ trackRef }: { trackRef: TrackReferenceOrPlaceholder }) {
+/** A participant: their video, or a big avatar; the mic state is always shown. */
+function CallTile({
+  trackRef,
+  className = "",
+  small = false,
+}: {
+  trackRef: TrackReferenceOrPlaceholder;
+  className?: string;
+  small?: boolean;
+}) {
   const isCamera = trackRef.source === Track.Source.Camera;
+  const name = trackRef.participant.name || trackRef.participant.identity;
+  // "Night Owl · Interviewer" -> avatar from "Night Owl", matching the waiting room.
+  const avatarName = name.split(" · ")[0];
+  const hasVideo = isTrackReference(trackRef) && !trackRef.publication.isMuted;
   return (
-    <ParticipantTile trackRef={trackRef} className="min-h-[140px]">
-      {isTrackReference(trackRef) && <VideoTrack trackRef={trackRef} />}
-      <div className="lk-participant-placeholder">
-        <ParticipantPlaceholder />
-      </div>
+    <ParticipantTile trackRef={trackRef} className={`!rounded-none bg-neutral-900 ${className}`}>
+      {isTrackReference(trackRef) && <VideoTrack trackRef={trackRef} className="!object-cover" />}
+      {!hasVideo && (
+        <div className="lk-participant-placeholder !bg-neutral-900">
+          <Avatar name={avatarName} size={small ? "h-12 w-12 text-lg" : "h-28 w-28 text-4xl"} />
+        </div>
+      )}
       <div className="lk-participant-metadata">
         <div className="lk-participant-metadata-item">
           {isCamera ? (
@@ -285,26 +444,70 @@ function CallTile({ trackRef }: { trackRef: TrackReferenceOrPlaceholder }) {
               <ParticipantName />
             </>
           ) : (
-            <>
-              <ScreenShareIcon style={{ marginRight: "0.25rem" }} />
-              <ParticipantName>&apos;s screen</ParticipantName>
-            </>
+            <ParticipantName>&apos;s screen</ParticipantName>
           )}
         </div>
-        <ConnectionQualityIndicator className="lk-participant-metadata-item" />
+        {!small && <ConnectionQualityIndicator className="lk-participant-metadata-item" />}
       </div>
     </ParticipantTile>
   );
 }
 
-function Message({ title, children }: { title: string; children?: React.ReactNode }) {
+function InviteLink({ url, alias, compact = false }: { url: string; alias: string; compact?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const [canShare, setCanShare] = useState(false);
+  useEffect(() => setCanShare(typeof navigator.share === "function"), []);
+  async function copy() {
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
-      <p className="text-lg">{title}</p>
+    <div className="space-y-2">
+      {!compact && <p className="text-xs text-neutral-400">Invite link</p>}
+      <div className="flex items-center gap-2 rounded-2xl bg-neutral-950 px-3 py-2.5">
+        <LinkIcon className="h-4 w-4 shrink-0 text-neutral-500" />
+        <code className="min-w-0 flex-1 truncate text-left text-sm">{url.replace(/^https?:\/\//, "")}</code>
+        <button onClick={copy} aria-label="Copy invite link" className="shrink-0 text-green-400">
+          {copied ? <span className="text-xs">Copied</span> : <CopyIcon className="h-5 w-5" />}
+        </button>
+      </div>
+      {canShare && (
+        <button
+          onClick={() => navigator.share({ title: `Join ${alias} on masqq`, url }).catch(() => {})}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-green-500 px-4 py-2.5 font-semibold text-black"
+        >
+          <ShareIcon className="h-5 w-5" /> Share invite
+        </button>
+      )}
+    </div>
+  );
+}
+
+function CallTimer({ running }: { running: boolean }) {
+  const [start] = useState(() => Date.now());
+  const [now, setNow] = useState(start);
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [running]);
+  const s = Math.floor((now - start) / 1000);
+  const text = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  return <span className="shrink-0 font-mono text-sm tabular-nums text-neutral-300">{text}</span>;
+}
+
+function Message({ title, children, spinner }: { title: string; children?: React.ReactNode; spinner?: boolean }) {
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-5 px-4 text-center">
+      {spinner && <span className="h-10 w-10 animate-spin rounded-full border-4 border-neutral-700 border-t-white" />}
+      <p className="text-xl font-medium">{title}</p>
       {children}
       <Link href="/dashboard" className="text-sm text-neutral-400 underline">
-        Back to dashboard
+        Back to home
       </Link>
     </main>
   );
 }
+
+export type { Lobby };

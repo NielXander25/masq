@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { requestJoin } from "@/app/c/[callId]/actions";
@@ -20,6 +21,7 @@ export function JoinRequest({
 }) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>(initialStatus);
+  const [hostStarted, setHostStarted] = useState(true);
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -33,12 +35,14 @@ export function JoinRequest({
         if (!res.ok) return;
         const data: { status: Status; callStatus: string } = await res.json();
         if (stopped) return;
+        setHostStarted(data.callStatus !== "SCHEDULED");
         if (data.callStatus === "ENDED") setStatus("ENDED");
         else setStatus(data.status);
       } catch {
         // Network blip: try again on the next tick.
       }
     };
+    poll();
     const timer = setInterval(poll, 2000);
     return () => {
       stopped = true;
@@ -52,25 +56,28 @@ export function JoinRequest({
 
   if (status === "PENDING" || status === "ADMITTED") {
     return (
-      <div className="rounded-xl border border-neutral-800 p-5">
-        <div className="flex items-center gap-3">
-          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-amber-400" />
-          <p>{status === "ADMITTED" ? "Admitted. Joining…" : `Waiting for ${alias} to let you in…`}</p>
-        </div>
-        <p className="mt-2 text-sm text-neutral-500">Keep this page open.</p>
+      <div className="flex flex-col items-center gap-4 py-6 text-center">
+        <span className="h-10 w-10 animate-spin rounded-full border-4 border-neutral-700 border-t-green-400" />
+        <p className="text-lg font-medium">
+          {status === "ADMITTED"
+            ? "You're in. Joining…"
+            : hostStarted
+              ? `Asking ${alias} to let you in…`
+              : `Waiting for ${alias} to start the call…`}
+        </p>
+        <p className="text-sm text-neutral-500">
+          {hostStarted ? "You'll join as soon as you're admitted." : "You'll be asked in when the call starts."} Keep this
+          page open.
+        </p>
       </div>
     );
   }
-  if (status === "DENIED") {
-    return <Notice>{alias} declined your request to join.</Notice>;
-  }
-  if (status === "ENDED") {
-    return <Notice>This call has ended.</Notice>;
-  }
+  if (status === "DENIED") return <Notice>{alias} declined your request to join.</Notice>;
+  if (status === "ENDED") return <Notice>This call has ended.</Notice>;
 
   return (
     <form
-      className="space-y-4 rounded-xl border border-neutral-800 p-5"
+      className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
         setError(null);
@@ -81,10 +88,10 @@ export function JoinRequest({
         });
       }}
     >
-      <label className="flex items-start gap-3">
+      <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-neutral-900 p-4">
         <input
           type="checkbox"
-          className="mt-1"
+          className="mt-0.5 h-5 w-5 shrink-0 accent-green-500"
           checked={consent}
           onChange={(e) => setConsent(e.target.checked)}
         />
@@ -94,14 +101,21 @@ export function JoinRequest({
       <button
         type="submit"
         disabled={!consent || pending}
-        className="w-full rounded-lg bg-white px-4 py-2.5 font-medium text-black hover:bg-neutral-200 disabled:opacity-50"
+        className="w-full rounded-full bg-green-500 px-4 py-4 text-lg font-semibold text-black hover:bg-green-400 disabled:bg-neutral-800 disabled:text-neutral-500"
       >
-        {pending ? "Sending…" : "Request to join"}
+        {pending ? "Sending…" : "Ask to join"}
       </button>
     </form>
   );
 }
 
 function Notice({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-xl border border-neutral-800 p-5 text-neutral-300">{children}</p>;
+  return (
+    <div className="space-y-4 py-6 text-center">
+      <p className="text-lg text-neutral-300">{children}</p>
+      <Link href="/dashboard" className="text-sm text-neutral-400 underline">
+        Go to home
+      </Link>
+    </div>
+  );
 }

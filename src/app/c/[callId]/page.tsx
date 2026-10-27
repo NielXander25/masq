@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { GoogleSignInButton } from "@/components/auth-buttons";
 import { LogoMark } from "@/components/logo";
+import { Avatar } from "@/components/ui/primitives";
 import { JoinRequest } from "@/components/join-request";
 import { db } from "@/lib/db";
 import { callIdFromInvite } from "@/lib/invite";
@@ -44,10 +45,11 @@ export default async function InvitePage({ params }: Params) {
     });
     if (!call) notFound();
     return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-4">
-        <LogoMark className="h-12 w-12" />
-        <div>
-          <p className="text-sm text-neutral-400">You&apos;re invited to a call with</p>
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
+        <LogoMark className="h-9 w-9" />
+        <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
+          <Avatar name={call.hostAlias} size="h-28 w-28 text-4xl" />
+          <p className="mt-5 text-sm text-neutral-400">You&apos;re invited to a call with</p>
           <h1 className="mt-1 text-3xl font-semibold">{call.hostAlias}</h1>
           {call.hostTitle && <p className="mt-1 text-neutral-300">{call.hostTitle}</p>}
         </div>
@@ -55,7 +57,7 @@ export default async function InvitePage({ params }: Params) {
           <p className="rounded-xl border border-neutral-800 p-5 text-neutral-300">This call has ended.</p>
         ) : (
           <>
-            <p className="text-sm text-neutral-400">Sign in with Google to request to join.</p>
+            <p className="mb-3 text-center text-sm text-neutral-400">Sign in with Google to ask to join.</p>
             <GoogleSignInButton redirectTo={`/c/${segment}`} />
           </>
         )}
@@ -89,28 +91,33 @@ export default async function InvitePage({ params }: Params) {
   const initialStatus = call.status === "ENDED" ? "ENDED" : (me?.status ?? "NONE");
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-4">
-      <div>
-        <p className="text-sm text-neutral-400">You&apos;re invited to a call with</p>
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
+      <LogoMark className="h-9 w-9" />
+      <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
+        <Avatar name={call.hostAlias} size="h-28 w-28 text-4xl" />
+        <p className="mt-5 text-sm text-neutral-400">You&apos;re invited to a call with</p>
         <h1 className="mt-1 text-3xl font-semibold">{call.hostAlias}</h1>
         {call.hostTitle && <p className="mt-1 text-neutral-300">{call.hostTitle}</p>}
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
+          <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs text-neutral-300">Anonymous host</span>
           {call.recordingEnabled && (
-            <span className="rounded bg-red-950 px-2 py-0.5 text-xs text-red-300">
-              This call will be recorded
-            </span>
+            <span className="rounded-full bg-red-950 px-3 py-1 text-xs text-red-300">Will be recorded</span>
           )}
           {call.guestCamera === "REQUIRED" && (
-            <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300">
-              Camera required
-            </span>
+            <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs text-neutral-300">Camera required</span>
           )}
         </div>
       </div>
-      <p className="text-sm text-neutral-400">
-        Joining as <span className="text-white">{user.name}</span> ({user.email})
-      </p>
-      <JoinRequest callId={callId} alias={call.hostAlias} initialStatus={initialStatus} />
+      <div className="flex items-center gap-3 rounded-2xl bg-neutral-900 px-4 py-3">
+        <Avatar name={user.name ?? user.email ?? "You"} image={user.image} size="h-9 w-9 text-sm" />
+        <div className="min-w-0 text-left text-sm">
+          <div className="truncate">Joining as {user.name}</div>
+          <div className="truncate text-neutral-400">{user.email}</div>
+        </div>
+      </div>
+      <div className="mt-4">
+        <JoinRequest callId={callId} alias={call.hostAlias} initialStatus={initialStatus} />
+      </div>
     </main>
   );
 }
