@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { UserActions } from "@/components/admin-controls";
 import { Badge, Empty } from "@/components/admin-ui";
+import { ChevronDownIcon } from "@/components/ui/icons";
+import { Avatar } from "@/components/ui/primitives";
 import { db } from "@/lib/db";
 import { fmtDate, timeAgo } from "@/lib/format";
 import { requireAdmin } from "@/lib/session";
@@ -27,7 +29,9 @@ export default async function AdminUsers({
       }
     : {};
 
-  const [total, users] = await Promise.all([
+  const [all, week, total, users] = await Promise.all([
+    db.user.count(),
+    db.user.count({ where: { createdAt: { gte: new Date(Date.now() - 7 * 86400_000) } } }),
     db.user.count({ where }),
     db.user.findMany({
       where,
@@ -54,48 +58,59 @@ export default async function AdminUsers({
 
   return (
     <div className="space-y-4">
+      <div className="rounded-3xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-6">
+        <div className="text-sm font-medium text-neutral-400">Total users</div>
+        <div className="mt-1 text-7xl font-semibold tabular-nums tracking-tight">{all.toLocaleString()}</div>
+        <div className="mt-2 text-sm text-neutral-400">+{week} this week</div>
+      </div>
+
       <form className="flex gap-2">
         <input
           name="q"
           defaultValue={q}
           placeholder="Search name or email"
-          className="flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-neutral-400"
+          className="min-w-0 flex-1 rounded-full border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm outline-none focus:border-neutral-500"
         />
-        <button className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black">Search</button>
+        <button className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black">Search</button>
       </form>
-      <p className="text-xs text-neutral-500">
-        {total} user{total === 1 ? "" : "s"}
-        {q && ` matching "${q}"`}
-      </p>
+      {q && (
+        <p className="px-1 text-xs text-neutral-500">
+          {total} matching &ldquo;{q}&rdquo;
+        </p>
+      )}
 
       {users.length === 0 ? (
         <Empty>No users found.</Empty>
       ) : (
-        <ul className="divide-y divide-neutral-800 rounded-xl border border-neutral-800">
+        <ul className="divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
           {users.map((u) => (
-            <li key={u.id} className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
-                {u.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={u.image} alt="" className="h-9 w-9 shrink-0 rounded-full" referrerPolicy="no-referrer" />
-                ) : (
-                  <div className="h-9 w-9 shrink-0 rounded-full bg-neutral-700" />
-                )}
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="truncate font-medium">{u.name ?? "—"}</span>
+            <li key={u.id}>
+              <details className="group">
+                <summary className="flex cursor-pointer list-none items-center gap-3 p-3 hover:bg-neutral-950 [&::-webkit-details-marker]:hidden">
+                  <Avatar name={u.name ?? u.email} image={u.image} />
+                  <span className="min-w-0 flex-1 truncate font-medium">{u.name ?? u.email}</span>
+                  <ChevronDownIcon className="h-5 w-5 shrink-0 text-neutral-500 transition group-open:rotate-180" />
+                </summary>
+                <div className="space-y-3 px-4 pb-4 pl-[4.25rem]">
+                  <div className="break-all text-sm text-neutral-300">{u.email}</div>
+                  <div className="flex flex-wrap gap-1.5">
                     {u.role === "ADMIN" && <Badge>ADMIN</Badge>}
                     <Badge>{u.plan}</Badge>
                     {u.bannedAt && <Badge>BANNED</Badge>}
                   </div>
-                  <div className="truncate text-sm text-neutral-400">{u.email}</div>
-                  <div className="mt-0.5 text-xs text-neutral-500">
-                    Joined {fmtDate(u.createdAt)} · seen {timeAgo(u.lastSeenAt)} · hosted {u._count.hostedCalls} ·
-                    joined {u._count.participations}
-                  </div>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                    <dt className="text-neutral-500">Joined</dt>
+                    <dd>{fmtDate(u.createdAt)}</dd>
+                    <dt className="text-neutral-500">Last seen</dt>
+                    <dd>{timeAgo(u.lastSeenAt)}</dd>
+                    <dt className="text-neutral-500">Calls hosted</dt>
+                    <dd className="tabular-nums">{u._count.hostedCalls}</dd>
+                    <dt className="text-neutral-500">Calls joined</dt>
+                    <dd className="tabular-nums">{u._count.participations}</dd>
+                  </dl>
+                  <UserActions userId={u.id} plan={u.plan} banned={Boolean(u.bannedAt)} isSelf={u.id === me.id} />
                 </div>
-              </div>
-              <UserActions userId={u.id} plan={u.plan} banned={Boolean(u.bannedAt)} isSelf={u.id === me.id} />
+              </details>
             </li>
           ))}
         </ul>

@@ -119,3 +119,9 @@ export const ChevronLeftIcon = ({ className }: P) => (
     <path d="m15 18-6-6 6-6" />
   </svg>
 );
+
+export const ChevronDownIcon = ({ className }: P) => (
+  <svg {...base(className)}>
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);

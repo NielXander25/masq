@@ -92,6 +92,17 @@ export default async function AdminOverview() {
 
   return (
     <div className="space-y-8">
+      <Link
+        href="/admin/users"
+        className="block rounded-3xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-6 hover:border-neutral-600"
+      >
+        <div className="text-sm font-medium text-neutral-400">Total users</div>
+        <div className="mt-1 text-7xl font-semibold tabular-nums tracking-tight">{users.toLocaleString()}</div>
+        <div className="mt-2 text-sm text-neutral-400">
+          +{users7} this week · {active7} active in the last 7 days
+        </div>
+      </Link>
+
       <section>
         <h2 className="mb-3 text-sm font-medium text-neutral-400">Integrations</h2>
         <ul className="grid gap-2 md:grid-cols-2">
@@ -124,8 +135,7 @@ export default async function AdminOverview() {
 
       <section>
         <h2 className="mb-3 text-sm font-medium text-neutral-400">Users</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Stat label="Total users" value={users} />
+        <div className="grid grid-cols-3 gap-3">
           <Stat label="New (7 days)" value={users7} sub={`${users30} in 30 days`} />
           <Stat label="PRO users" value={pro} sub={users ? `${Math.round((pro / users) * 100)}% of users` : undefined} />
           <Stat label="Banned" value={banned} />
