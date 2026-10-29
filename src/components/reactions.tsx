@@ -2,6 +2,7 @@
 
 import { useDataChannel } from "@livekit/components-react";
 import { useCallback, useRef, useState } from "react";
+import { baseName } from "@/lib/alias";
 
 // Only these can be sent or shown, so a reaction can never carry other text.
 export const REACTIONS = ["👍", "❤️", "😂", "😮", "👏", "🎉", "🙏", "😢"] as const;
@@ -42,8 +43,8 @@ export function useReactions() {
     const now = Date.now();
     if (now - (lastFrom.current.get(who) ?? 0) < 250) return;
     lastFrom.current.set(who, now);
-    // The host's name is their alias (plus title), never their account.
-    show(emoji as Emoji, (msg.from?.name || "Someone").split(" · ")[0]!);
+    // The host's name is their alias (plus purpose), never their account.
+    show(emoji as Emoji, baseName(msg.from?.name || "Someone"));
   });
 
   const react = useCallback(

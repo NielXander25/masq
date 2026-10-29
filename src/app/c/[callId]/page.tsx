@@ -7,6 +7,7 @@ import { Logo } from "@/components/logo";
 import { Avatar } from "@/components/ui/primitives";
 import { JoinRequest } from "@/components/join-request";
 import { db } from "@/lib/db";
+import { hostDisplayName } from "@/lib/alias";
 import { callIdFromInvite } from "@/lib/invite";
 import { requireUser } from "@/lib/session";
 
@@ -20,7 +21,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     select: { hostAlias: true, hostTitle: true, status: true },
   });
   if (!call || call.status === "ENDED") return { title: "Call invite" };
-  const who = call.hostTitle ? `${call.hostAlias} (${call.hostTitle})` : call.hostAlias;
+  const who = hostDisplayName(call.hostAlias, call.hostTitle);
   const title = `${who} invited you to a call`;
   const description = "A private masqq call. The host stays anonymous; tap to ask to join.";
   // Setting openGraph here replaces the root one, so the image must be repeated.
@@ -52,8 +53,7 @@ export default async function InvitePage({ params }: Params) {
         <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
           <Avatar name={call.hostAlias} size="h-28 w-28 text-4xl" />
           <p className="mt-5 text-[15px] text-neutral-400">You&apos;re invited to a call with</p>
-          <h1 className="mt-1 text-[28px] font-bold tracking-tight">{call.hostAlias}</h1>
-          {call.hostTitle && <p className="mt-0.5 text-[17px] text-neutral-300">{call.hostTitle}</p>}
+          <HostHeading alias={call.hostAlias} purpose={call.hostTitle} />
           <span className="mt-4 rounded-full bg-white/[0.06] px-3 py-1 text-[13px] text-neutral-300 ring-1 ring-white/10">
             Anonymous host
           </span>
@@ -103,8 +103,7 @@ export default async function InvitePage({ params }: Params) {
       <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
         <Avatar name={call.hostAlias} size="h-28 w-28 text-4xl" />
         <p className="mt-5 text-[15px] text-neutral-400">You&apos;re invited to a call with</p>
-        <h1 className="mt-1 text-[28px] font-bold tracking-tight">{call.hostAlias}</h1>
-        {call.hostTitle && <p className="mt-0.5 text-[17px] text-neutral-300">{call.hostTitle}</p>}
+        <HostHeading alias={call.hostAlias} purpose={call.hostTitle} />
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[13px] text-neutral-300 ring-1 ring-white/10">
             Anonymous host
@@ -132,5 +131,15 @@ export default async function InvitePage({ params }: Params) {
         <JoinRequest callId={callId} alias={call.hostAlias} initialStatus={initialStatus} />
       </div>
     </AuthScreen>
+  );
+}
+
+/** "Night Owl | Interviewer": the name, then the purpose of the call. */
+function HostHeading({ alias, purpose }: { alias: string; purpose: string | null }) {
+  return (
+    <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-tight">
+      {alias}
+      {purpose && <span className="font-medium text-neutral-400"> | {purpose}</span>}
+    </h1>
   );
 }

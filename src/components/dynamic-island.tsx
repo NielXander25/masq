@@ -3,6 +3,7 @@
 import { useSpeakingParticipants } from "@livekit/components-react";
 import { useEffect, useState } from "react";
 import type { Lobby } from "@/components/lobby-panel";
+import { baseName } from "@/lib/alias";
 import { Avatar } from "@/components/ui/primitives";
 
 /**
@@ -30,8 +31,7 @@ export function DynamicIsland({
 }) {
   const [open, setOpen] = useState(false);
   const speaking = useSpeakingParticipants().filter((p) => !p.isLocal);
-  // The host's name is "Alias · Title": show just the alias.
-  const speaker = speaking[0] ? (speaking[0].name || "Someone").split(" · ")[0] : null;
+  const speaker = speaking[0] ? baseName(speaking[0].name || "Someone") : null;
   const waiting = lobby?.waiting[0];
   const expanded = Boolean(waiting) || reconnecting || open;
 

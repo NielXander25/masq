@@ -57,3 +57,13 @@ export const aliasSchema = z
   .max(32, "Alias must be at most 32 characters")
   .regex(/^[\p{L}\p{N} _.'-]+$/u, "Use letters, numbers, spaces, and _ . ' - only")
   .refine((a) => !isBlockedAlias(a), "That alias isn't allowed");
+
+/** How the host appears in the call: "Night Owl | Interviewer", or just the name. */
+export function hostDisplayName(alias: string, purpose?: string | null) {
+  return purpose ? `${alias} | ${purpose}` : alias;
+}
+
+/** The name part of a participant name ("Night Owl | Interviewer" -> "Night Owl"). */
+export function baseName(name: string) {
+  return name.split(/ [|·] /)[0] ?? name;
+}

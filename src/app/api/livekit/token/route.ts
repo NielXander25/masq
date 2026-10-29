@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hostDisplayName } from "@/lib/alias";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { apiUser, jsonError, parseJson } from "@/lib/api";
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
         kind: "host",
         roomName: call.roomName,
         identity: participant.livekitIdentity,
-        alias: call.hostTitle ? `${call.hostAlias} · ${call.hostTitle}` : call.hostAlias,
+        alias: hostDisplayName(call.hostAlias, call.hostTitle),
       })
     : await createToken({
         kind: "guest",

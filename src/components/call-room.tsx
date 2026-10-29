@@ -43,6 +43,7 @@ import {
   VideoOffIcon,
 } from "@/components/ui/icons";
 import { Avatar, RoundButton, Sheet } from "@/components/ui/primitives";
+import { baseName, hostDisplayName } from "@/lib/alias";
 import type { VoicePreset } from "@/lib/voice/presets";
 import { useMicStore } from "@/lib/voice/store";
 
@@ -258,8 +259,8 @@ function InCall({
   useEffect(() => setCanScreenShare(Boolean(navigator.mediaDevices?.getDisplayMedia)), []);
 
   const subtitle = isHost
-    ? `You're hosting anonymously${title ? ` as ${title}` : ""}`
-    : `${title ? `${title} · ` : ""}Anonymous`;
+    ? "You're hosting anonymously"
+    : "Anonymous host";
 
   return (
     // Our own full-screen frame: LiveKit's room styles don't lay out children as flex.
@@ -273,7 +274,7 @@ function InCall({
       <ScriptOverlay script={script} onEdit={() => setSheet("script")} />
 
       <DynamicIsland
-        alias={alias}
+        alias={hostDisplayName(alias, title)}
         subtitle={subtitle}
         running={state === ConnectionState.Connected}
         recording={recording}
@@ -488,8 +489,8 @@ function CallTile({
 }) {
   const isCamera = trackRef.source === Track.Source.Camera;
   const name = trackRef.participant.name || trackRef.participant.identity;
-  // "Night Owl · Interviewer" -> avatar from "Night Owl", matching the waiting room.
-  const avatarName = name.split(" · ")[0];
+  // "Night Owl | Interviewer" -> avatar from "Night Owl", matching the waiting room.
+  const avatarName = baseName(name);
   const hasVideo = isTrackReference(trackRef) && !trackRef.publication.isMuted;
   return (
     <ParticipantTile

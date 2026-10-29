@@ -70,7 +70,7 @@ function NewCallSheet({ canUseVoiceChanger, canRecord, onClose }: Props & { onCl
         </label>
 
         <label className="block">
-          <span className="text-sm text-neutral-400">Title (optional)</span>
+          <span className="text-sm text-neutral-400">Purpose of the call (optional)</span>
           <input
             name="hostTitle"
             maxLength={32}

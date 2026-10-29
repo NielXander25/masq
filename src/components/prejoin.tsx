@@ -100,7 +100,7 @@ export function PreJoin({ alias, title, isHost, disguise, cameraRequired = false
           <p className="text-xs text-neutral-400">{isHost ? "Hosting as" : "Call with"}</p>
           <h1 className="truncate text-lg font-semibold leading-tight">
             {alias}
-            {title && <span className="ml-2 text-sm font-normal text-neutral-400">{title}</span>}
+            {title && <span className="text-sm font-normal text-neutral-400"> | {title}</span>}
           </h1>
         </div>
       </header>
