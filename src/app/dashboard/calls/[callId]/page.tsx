@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Logo } from "@/components/logo";
+import { ChevronLeftIcon } from "@/components/ui/icons";
 import { db } from "@/lib/db";
 import { fmtDateTime, fmtDuration } from "@/lib/format";
 import { r2Configured, r2SignedUrl } from "@/lib/r2";
@@ -61,39 +62,42 @@ export default async function CallRecordingPage({ params }: { params: Promise<{ 
   const segments = readSegments(call.transcript?.segments);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className="relative isolate mx-auto max-w-3xl px-4 pb-12 pt-[max(1rem,env(safe-area-inset-top))]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 bg-[radial-gradient(ellipse_at_top,rgba(129,140,248,0.14),transparent_70%)]" />
       <header className="flex items-center justify-between">
-        <Link href="/dashboard">
-          <Logo className="text-xl" />
+        <Link
+          href="/dashboard"
+          aria-label="Back to calls"
+          className="glass flex h-10 items-center gap-1 rounded-full pl-2 pr-4 text-sm font-medium"
+        >
+          <ChevronLeftIcon className="h-5 w-5" /> Calls
         </Link>
-        <Link href="/dashboard" className="text-sm text-neutral-400 hover:text-white">
-          ← Dashboard
-        </Link>
+        <Logo className="text-lg" />
       </header>
 
-      <h1 className="mt-8 text-2xl font-semibold">{call.hostAlias}</h1>
-      <p className="mt-1 text-sm text-neutral-400">
+      <h1 className="mt-6 px-1 text-[30px] font-bold leading-tight tracking-tight">{call.hostAlias}</h1>
+      <p className="mt-1 px-1 text-sm text-neutral-400">
         {fmtDateTime(call.startedAt)}
         {duration ? ` · ${fmtDuration(duration)}` : ""}
       </p>
 
       {!call.recordingEnabled ? (
-        <p className="mt-6 text-neutral-400">This call wasn&apos;t recorded.</p>
+        <p className="glass mt-5 rounded-[22px] p-5 text-center text-neutral-400">This call wasn&apos;t recorded.</p>
       ) : (
         <>
-          <section className="mt-6 rounded-xl border border-neutral-800 p-4">
+          <section className="glass mt-5 rounded-[22px] p-4">
             <h2 className="mb-3 font-medium">Recording</h2>
             {audioUrl ? (
               <>
                 <audio controls preload="metadata" src={audioUrl} className="w-full" />
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <a href={downloadUrl!} className="rounded-lg border border-neutral-700 px-3 py-1.5 text-sm hover:bg-neutral-800">
+                  <a href={downloadUrl!} className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium ring-1 ring-white/10 hover:bg-white/15">
                     Download audio (.ogg)
                   </a>
                   {call.transcript?.status === "DONE" && (
                     <a
                       href={`/api/calls/${call.id}/transcript`}
-                      className="rounded-lg border border-neutral-700 px-3 py-1.5 text-sm hover:bg-neutral-800"
+                      className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium ring-1 ring-white/10 hover:bg-white/15"
                     >
                       Download transcript (.txt)
                     </a>
@@ -117,7 +121,7 @@ export default async function CallRecordingPage({ params }: { params: Promise<{ 
                 {call.transcript?.status === "DONE" && (
                   <a
                     href={`/api/calls/${call.id}/transcript`}
-                    className="inline-block rounded-lg border border-neutral-700 px-3 py-1.5 text-sm hover:bg-neutral-800"
+                    className="inline-block rounded-full bg-white/10 px-4 py-2 text-sm font-medium ring-1 ring-white/10 hover:bg-white/15"
                   >
                     Download transcript (.txt)
                   </a>
@@ -132,7 +136,7 @@ export default async function CallRecordingPage({ params }: { params: Promise<{ 
             )}
           </section>
 
-          <section className="mt-6 rounded-xl border border-neutral-800 p-4">
+          <section className="glass mt-5 rounded-[22px] p-4">
             <h2 className="mb-3 font-medium">Transcript</h2>
             {call.transcript?.status === "DONE" ? (
               segments.length ? (

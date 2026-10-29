@@ -48,7 +48,7 @@ export function LevelMeter({
   return (
     <div className={`flex items-center gap-2 ${dimmed ? "opacity-40" : ""}`}>
       <span className={`${labelClass} shrink-0 text-xs text-neutral-400`}>{label}</span>
-      <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-800" role="img" aria-label={`${label} level`}>
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10" role="img" aria-label={`${label} level`}>
         <div ref={bar} className="h-full w-0 rounded-full" />
       </div>
     </div>

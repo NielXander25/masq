@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CallRoom } from "@/components/call-room";
 import { RejoinButton } from "@/components/rejoin-button";
+import { EndedIcon, StatusCard } from "@/components/status-card";
 import { db } from "@/lib/db";
 import { inviteUrl } from "@/lib/invite";
 import { recordingConfigured } from "@/lib/recording";
@@ -38,14 +38,9 @@ export default async function CallPage({ params }: { params: Promise<{ callId: s
   const { call } = participant;
   if (!participant.isHost && participant.status === "LEFT" && call.status !== "ENDED") {
     return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
-        <p className="text-sm text-neutral-400">You left your call with</p>
-        <h1 className="text-3xl font-semibold">{call.hostAlias}</h1>
+      <StatusCard title="You left the call" subtitle={<>with {call.hostAlias}</>}>
         <RejoinButton callId={callId} />
-        <Link href="/dashboard" className="text-sm text-neutral-400 underline">
-          Back to dashboard
-        </Link>
-      </main>
+      </StatusCard>
     );
   }
   if (!participant.isHost && participant.status !== "ADMITTED" && call.status !== "ENDED") {
@@ -54,12 +49,7 @@ export default async function CallPage({ params }: { params: Promise<{ callId: s
 
   if (call.status === "ENDED") {
     return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-4">
-        <p className="text-lg">This call has ended.</p>
-        <Link href="/dashboard" className="text-sm text-neutral-400 underline">
-          Back to dashboard
-        </Link>
-      </main>
+      <StatusCard icon={<EndedIcon />} title="Call ended" />
     );
   }
 

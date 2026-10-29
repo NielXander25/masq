@@ -58,7 +58,7 @@ export default async function AdminUsers({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-3xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-6">
+      <div className="glass rounded-[28px] p-6">
         <div className="text-sm font-medium text-neutral-400">Total users</div>
         <div className="mt-1 text-7xl font-semibold tabular-nums tracking-tight">{all.toLocaleString()}</div>
         <div className="mt-2 text-sm text-neutral-400">+{week} this week</div>
@@ -69,7 +69,7 @@ export default async function AdminUsers({
           name="q"
           defaultValue={q}
           placeholder="Search name or email"
-          className="min-w-0 flex-1 rounded-full border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm outline-none focus:border-neutral-500"
+          className="ios-field min-w-0 flex-1 !rounded-full !py-2.5 !text-sm"
         />
         <button className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black">Search</button>
       </form>
@@ -82,11 +82,11 @@ export default async function AdminUsers({
       {users.length === 0 ? (
         <Empty>No users found.</Empty>
       ) : (
-        <ul className="divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
+        <ul className="glass divide-y divide-white/[0.07] overflow-hidden rounded-[22px]">
           {users.map((u) => (
             <li key={u.id}>
               <details className="group">
-                <summary className="flex cursor-pointer list-none items-center gap-3 p-3 hover:bg-neutral-950 [&::-webkit-details-marker]:hidden">
+                <summary className="flex cursor-pointer list-none items-center gap-3 p-3 hover:bg-white/[0.04] [&::-webkit-details-marker]:hidden">
                   <Avatar name={u.name ?? u.email} image={u.image} />
                   <span className="min-w-0 flex-1 truncate font-medium">{u.name ?? u.email}</span>
                   <ChevronDownIcon className="h-5 w-5 shrink-0 text-neutral-500 transition group-open:rotate-180" />

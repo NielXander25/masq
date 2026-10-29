@@ -34,7 +34,7 @@ export default async function AdminAudit() {
       <p className="text-sm text-neutral-400">
         Every time an admin reveals a host, opens a recording or transcript, bans someone or changes a plan. Read-only.
       </p>
-      <ul className="divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
+      <ul className="glass divide-y divide-white/[0.07] overflow-hidden rounded-[22px]">
         {rows.map((r) => {
           const action = ACTION[r.action as AuditAction] ?? { label: r.action, tone: "bg-neutral-800 text-neutral-300" };
           const target =

@@ -23,7 +23,7 @@ export default async function AdminReports() {
   if (reports.length === 0) return <Empty>No reports yet.</Empty>;
 
   return (
-    <ul className="divide-y divide-neutral-800 rounded-xl border border-neutral-800">
+    <ul className="glass divide-y divide-white/[0.07] overflow-hidden rounded-[22px]">
       {reports.map((r) => (
         <li key={r.id} className="space-y-2 p-4">
           <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -41,13 +41,13 @@ export default async function AdminReports() {
             <select
               name="status"
               defaultValue={r.status}
-              className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
+              className="rounded-full bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/10"
             >
               {STATUSES.map((s) => (
                 <option key={s}>{s}</option>
               ))}
             </select>
-            <button className="rounded-md border border-neutral-700 px-2 py-1 text-xs hover:bg-neutral-800">
+            <button className="rounded-full bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/10 hover:bg-white/15">
               Update
             </button>
           </form>

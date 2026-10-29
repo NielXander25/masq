@@ -46,8 +46,8 @@ export default async function AdminCalls({
           <Link
             key={f ?? "all"}
             href={f ? `/admin/calls?status=${f}` : "/admin/calls"}
-            className={`rounded-lg px-3 py-1 text-sm ${
-              status === f ? "bg-neutral-200 text-black" : "border border-neutral-800 text-neutral-400"
+            className={`rounded-full px-3.5 py-1.5 text-sm ${
+              status === f ? "bg-white text-black" : "bg-white/10 text-neutral-300"
             }`}
           >
             {f ?? "All"}
@@ -57,10 +57,10 @@ export default async function AdminCalls({
       {calls.length === 0 ? (
         <Empty>No calls.</Empty>
       ) : (
-        <ul className="divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
+        <ul className="glass divide-y divide-white/[0.07] overflow-hidden rounded-[22px]">
           {calls.map((c) => (
             <li key={c.id}>
-              <Link href={`/admin/calls/${c.id}`} className="block space-y-1 p-4 hover:bg-neutral-950">
+              <Link href={`/admin/calls/${c.id}`} className="block space-y-1 p-4 hover:bg-white/[0.04]">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{c.hostAlias}</span>
                   <Badge>{c.status}</Badge>

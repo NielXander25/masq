@@ -25,7 +25,7 @@ export function JoinWithLink() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-neutral-800 px-4 py-3 font-semibold hover:bg-neutral-700"
+        className="flex flex-1 items-center justify-center gap-2 rounded-full bg-white/10 px-4 py-3.5 font-semibold ring-1 ring-white/10 transition hover:bg-white/15 active:scale-[0.98]"
       >
         Join with a link
       </button>
@@ -39,10 +39,10 @@ export function JoinWithLink() {
               setError(null);
             }}
             placeholder="Paste a link or code"
-            className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-base outline-none focus:border-neutral-400"
+            className="ios-field"
           />
           {error && <p className="text-sm text-red-400">{error}</p>}
-          <button className="w-full rounded-2xl bg-white px-4 py-3 font-semibold text-black">Continue</button>
+          <button className="btn-primary">Continue</button>
         </form>
       </Sheet>
     </>
@@ -108,7 +108,7 @@ export function ShareLinkButton({ url, alias }: { url: string; alias: string }) 
     <button
       onClick={share}
       aria-label="Share invite link"
-      className="flex h-10 min-w-10 items-center justify-center rounded-full px-2 text-green-400 hover:bg-neutral-800"
+      className="flex h-10 min-w-10 items-center justify-center rounded-full px-2 text-[#30d158] hover:bg-white/10"
     >
       {copied ? <span className="text-xs">Copied</span> : <ShareIcon className="h-5 w-5" />}
     </button>

@@ -147,7 +147,7 @@ export function ChatPanel({ chat }: { chat: Chat }) {
               <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div
                   className={`max-w-[80%] rounded-2xl px-3.5 py-2 ${
-                    mine ? "rounded-br-md bg-green-600 text-white" : "rounded-bl-md bg-neutral-800"
+                    mine ? "rounded-br-md bg-[#0a84ff] text-white" : "rounded-bl-md bg-white/10"
                   }`}
                 >
                   {!mine && (
@@ -156,7 +156,7 @@ export function ChatPanel({ chat }: { chat: Chat }) {
                     </div>
                   )}
                   <div className="whitespace-pre-wrap break-words text-[15px]">{m.text}</div>
-                  <div className={`mt-0.5 text-right text-[10px] ${mine ? "text-green-100/80" : "text-neutral-500"}`}>
+                  <div className={`mt-0.5 text-right text-[10px] ${mine ? "text-white/70" : "text-neutral-500"}`}>
                     {new Date(m.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
                   </div>
                 </div>
@@ -175,13 +175,13 @@ export function ChatPanel({ chat }: { chat: Chat }) {
           placeholder="Message everyone"
           aria-label="Message"
           enterKeyHint="send"
-          className="min-w-0 flex-1 rounded-full bg-neutral-800 px-4 py-3 text-[16px] outline-none ring-1 ring-white/10 focus:ring-white/30"
+          className="min-w-0 flex-1 rounded-full bg-white/10 px-4 py-3 text-[16px] outline-none ring-1 ring-white/10 focus:ring-white/30"
         />
         <button
           type="submit"
           disabled={!text.trim() || sending}
           aria-label="Send message"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-500 text-black disabled:opacity-40"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#0a84ff] text-white disabled:opacity-40"
         >
           <SendIcon className="h-5 w-5" />
         </button>

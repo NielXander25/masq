@@ -236,7 +236,7 @@ export function CameraRequiredGuard({ alias }: { alias: string }) {
   const [busy, setBusy] = useState(false);
   if (state !== ConnectionState.Connected || isCameraEnabled) return null;
   return (
-    <div className="mx-3 mt-2 flex items-center justify-between gap-3 rounded-lg bg-amber-950 px-3 py-2 text-sm text-amber-200">
+    <div className="mx-3 mt-2 flex items-center justify-between gap-3 rounded-2xl bg-amber-500/10 px-3 py-2 ring-1 ring-amber-500/20 text-sm text-amber-200">
       <span>{alias} requires your camera to be on.</span>
       <button
         disabled={busy}
@@ -263,7 +263,7 @@ export function PresetSwitcher() {
       aria-label="Voice preset"
       value={mode}
       onChange={(e) => isVoicePreset(e.target.value) && setMode(e.target.value)}
-      className="rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-sm"
+      className="rounded-full bg-white/10 px-3 py-1.5 text-sm ring-1 ring-white/10"
     >
       {VOICE_PRESETS.map((p) => (
         <option key={p} value={p}>

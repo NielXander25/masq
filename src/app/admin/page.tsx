@@ -94,7 +94,7 @@ export default async function AdminOverview() {
     <div className="space-y-8">
       <Link
         href="/admin/users"
-        className="block rounded-3xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-6 hover:border-neutral-600"
+        className="block glass rounded-[28px] p-6 transition hover:bg-white/[0.04]"
       >
         <div className="text-sm font-medium text-neutral-400">Total users</div>
         <div className="mt-1 text-7xl font-semibold tabular-nums tracking-tight">{users.toLocaleString()}</div>
@@ -107,7 +107,7 @@ export default async function AdminOverview() {
         <h2 className="mb-3 text-sm font-medium text-neutral-400">Integrations</h2>
         <ul className="grid gap-2 md:grid-cols-2">
           {integrations.map((c) => (
-            <li key={c.name} className="flex items-start gap-3 rounded-xl border border-neutral-800 p-3">
+            <li key={c.name} className="flex items-start gap-3 glass rounded-[18px] p-3">
               <span
                 className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${
                   c.status === "ok" ? "bg-green-500" : c.status === "missing" ? "bg-neutral-600" : "bg-red-500"
@@ -170,10 +170,10 @@ export default async function AdminOverview() {
             All calls →
           </Link>
         </div>
-        <ul className="divide-y divide-neutral-800 rounded-xl border border-neutral-800">
+        <ul className="glass divide-y divide-white/[0.07] overflow-hidden rounded-[22px]">
           {recent.map((c) => (
             <li key={c.id}>
-              <Link href={`/admin/calls/${c.id}`} className="flex items-center justify-between gap-3 p-3 hover:bg-neutral-950">
+              <Link href={`/admin/calls/${c.id}`} className="flex items-center justify-between gap-3 p-3 hover:bg-white/[0.04]">
                 <span className="flex items-center gap-2">
                   <span className="font-medium">{c.hostAlias}</span>
                   <Badge>{c.status}</Badge>

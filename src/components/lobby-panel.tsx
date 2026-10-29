@@ -96,21 +96,21 @@ export function LobbyPanel({ lobby }: { lobby: Lobby }) {
         ) : (
           <ul className="mt-2 space-y-2">
             {lobby.waiting.map((g) => (
-              <li key={g.id} className="flex items-center gap-3 rounded-2xl bg-neutral-950 p-3">
+              <li key={g.id} className="flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3">
                 <div className="min-w-0 flex-1">
                   <RevealName name={g.name ?? g.email} email={g.email} image={g.image} />
                 </div>
                 <button
                   disabled={lobby.busy === g.id}
                   onClick={() => lobby.decide(g.id, "deny")}
-                  className="rounded-full bg-neutral-800 px-3 py-1.5 text-sm disabled:opacity-50"
+                  className="rounded-full bg-white/10 px-3 py-1.5 text-sm disabled:opacity-50"
                 >
                   Deny
                 </button>
                 <button
                   disabled={lobby.busy === g.id}
                   onClick={() => lobby.decide(g.id, "admit")}
-                  className="rounded-full bg-green-500 px-3 py-1.5 text-sm font-semibold text-black disabled:opacity-50"
+                  className="rounded-full bg-[#30d158] px-3 py-1.5 text-sm font-semibold text-black disabled:opacity-50"
                 >
                   Admit
                 </button>
@@ -140,7 +140,7 @@ function InCallList({ lobby }: { lobby: Lobby }) {
             const micOn = Boolean(live?.getTrackPublication(Track.Source.Microphone)?.isMuted === false);
             const name = g.name ?? g.email;
             return (
-              <li key={g.id} className="rounded-2xl bg-neutral-950 p-3">
+              <li key={g.id} className="rounded-2xl bg-white/[0.06] p-3">
                 <div className="flex items-center gap-3">
                   <div className="min-w-0 flex-1">
                     <RevealName name={live ? name : `${name} (away)`} email={g.email} image={g.image} />
@@ -150,14 +150,14 @@ function InCallList({ lobby }: { lobby: Lobby }) {
                     onClick={() => lobby.decide(g.id, "mute")}
                     aria-label={micOn ? `Mute ${name}` : `${name} is muted`}
                     title={micOn ? "Mute" : "Muted"}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-800 disabled:text-red-400 disabled:opacity-70"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 disabled:text-red-400 disabled:opacity-70"
                   >
                     {micOn ? <MicIcon className="h-4 w-4" /> : <MicOffIcon className="h-4 w-4" />}
                   </button>
                   <button
                     disabled={lobby.busy === g.id}
                     onClick={() => setConfirm(confirm === g.id ? null : g.id)}
-                    className="rounded-full bg-neutral-800 px-3 py-1.5 text-sm text-red-300 disabled:opacity-50"
+                    className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-red-300 disabled:opacity-50"
                   >
                     Remove
                   </button>
@@ -170,7 +170,7 @@ function InCallList({ lobby }: { lobby: Lobby }) {
                     <div className="mt-2 flex gap-2">
                       <button
                         onClick={() => setConfirm(null)}
-                        className="flex-1 rounded-full bg-neutral-800 px-3 py-2 text-sm"
+                        className="flex-1 rounded-full bg-white/10 px-3 py-2 text-sm"
                       >
                         Cancel
                       </button>

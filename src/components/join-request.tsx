@@ -111,10 +111,14 @@ export function JoinRequest({
 
 function Notice({ children }: { children: React.ReactNode }) {
   return (
-    <div className="space-y-4 py-6 text-center">
-      <p className="text-lg text-neutral-300">{children}</p>
-      <Link href="/dashboard" className="text-sm text-neutral-400 underline">
-        Go to home
+    <div className="glass flex flex-col items-center gap-4 rounded-[22px] p-5 text-center">
+      <p className="text-lg text-neutral-200">{children}</p>
+      <Link
+        href="/dashboard"
+        aria-label="Home"
+        className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 text-2xl ring-1 ring-white/15"
+      >
+        🏠
       </Link>
     </div>
   );

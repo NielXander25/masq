@@ -19,7 +19,7 @@ export function RejoinButton({ callId, className = "" }: { callId: string; class
             else setError(res.error);
           })
         }
-        className={`rounded-lg bg-white px-4 py-2 text-sm font-medium text-black hover:bg-neutral-200 disabled:opacity-50 ${className}`}
+        className={`rounded-full bg-white px-6 py-2.5 text-[15px] font-semibold text-black transition active:scale-[0.98] disabled:opacity-50 ${className}`}
       >
         {pending ? "Rejoining…" : "Rejoin call"}
       </button>

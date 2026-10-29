@@ -104,7 +104,7 @@ export function Switch({
   name?: string;
 }) {
   return (
-    <label className={`flex items-center justify-between gap-4 py-2 ${disabled ? "opacity-50" : ""}`}>
+    <label className={`flex items-center justify-between gap-4 py-2.5 ${disabled ? "opacity-50" : ""}`}>
       <span>{label}</span>
       <span className="relative inline-flex">
         <input
@@ -115,8 +115,8 @@ export function Switch({
           disabled={disabled}
           onChange={(e) => onChange(e.target.checked)}
         />
-        <span className="h-7 w-12 rounded-full bg-neutral-700 transition peer-checked:bg-green-500 peer-focus-visible:ring-2 peer-focus-visible:ring-white" />
-        <span className="absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white transition peer-checked:translate-x-5" />
+        <span className="h-[31px] w-[51px] rounded-full bg-white/20 transition peer-checked:bg-[#30d158] peer-focus-visible:ring-2 peer-focus-visible:ring-white" />
+        <span className="absolute left-0.5 top-0.5 h-[27px] w-[27px] rounded-full bg-white shadow-[0_3px_8px_rgba(0,0,0,0.3)] transition peer-checked:translate-x-5" />
       </span>
     </label>
   );

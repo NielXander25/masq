@@ -16,7 +16,7 @@ export function NewCallButton(props: Props) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 font-semibold text-black hover:bg-neutral-200"
+        className="flex flex-1 items-center justify-center gap-2 rounded-full bg-white px-4 py-3.5 font-semibold text-black shadow-[0_10px_30px_-10px_rgba(255,255,255,0.35)] transition active:scale-[0.98]"
       >
         <LinkIcon className="h-5 w-5" />
         New call link
@@ -25,7 +25,7 @@ export function NewCallButton(props: Props) {
       <button
         onClick={() => setOpen(true)}
         aria-label="New call"
-        className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-5 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-500 text-black shadow-lg shadow-black/40 sm:hidden"
+        className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#30d158] text-black shadow-[0_10px_30px_rgba(48,209,88,0.45)] transition active:scale-95 sm:hidden"
       >
         <PlusIcon className="h-7 w-7" />
       </button>
@@ -56,7 +56,7 @@ function NewCallSheet({ canUseVoiceChanger, canRecord, onClose }: Props & { onCl
     <Sheet open onClose={onClose} title="New call">
       <form action={action} className="space-y-5">
         <label className="block">
-          <span className="text-sm text-neutral-400">Name guests see</span>
+          <span className="px-1 text-[13px] font-medium text-neutral-400">Name guests see</span>
           <input
             name="alias"
             required
@@ -64,23 +64,23 @@ function NewCallSheet({ canUseVoiceChanger, canRecord, onClose }: Props & { onCl
             maxLength={32}
             autoFocus
             placeholder="e.g. Night Owl"
-            className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-base outline-none focus:border-neutral-400"
+            className="ios-field mt-1.5"
           />
           {fe.alias && <span className="mt-1 block text-sm text-red-400">{fe.alias[0]}</span>}
         </label>
 
         <label className="block">
-          <span className="text-sm text-neutral-400">Purpose of the call (optional)</span>
+          <span className="px-1 text-[13px] font-medium text-neutral-400">Purpose of the call (optional)</span>
           <input
             name="hostTitle"
             maxLength={32}
             placeholder="e.g. Interviewer, Counsellor, Coach"
-            className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-base outline-none focus:border-neutral-400"
+            className="ios-field mt-1.5"
           />
           {fe.hostTitle && <span className="mt-1 block text-sm text-red-400">{fe.hostTitle[0]}</span>}
         </label>
 
-        <div className="rounded-2xl bg-neutral-950 px-4 py-2">
+        <div className="rounded-[22px] bg-white/[0.06] px-4 py-1.5 ring-1 ring-white/10">
           <Switch
             name="voiceChangerEnabled"
             label="Disguise my voice"
@@ -89,15 +89,10 @@ function NewCallSheet({ canUseVoiceChanger, canRecord, onClose }: Props & { onCl
             disabled={!canUseVoiceChanger}
           />
           {voiceOn ? (
-            <div className="flex flex-wrap gap-2 pb-2">
+            <div className="segmented mb-3" role="group" aria-label="Voice disguise">
               <input type="hidden" name="voicePreset" value={preset} />
               {VOICE_PRESETS.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setPreset(p)}
-                  className={`rounded-full px-3.5 py-1.5 text-sm ${p === preset ? "bg-white text-black" : "bg-neutral-800 text-neutral-200"}`}
-                >
+                <button key={p} type="button" onClick={() => setPreset(p)} aria-pressed={p === preset}>
                   {PRESET_LABELS[p]}
                 </button>
               ))}
@@ -110,24 +105,19 @@ function NewCallSheet({ canUseVoiceChanger, canRecord, onClose }: Props & { onCl
             </p>
           )}
           {fe.voicePreset && <p className="pb-2 text-sm text-red-400">{fe.voicePreset[0]}</p>}
-          <div className="border-t border-neutral-800" />
+          <div className="border-t border-white/10" />
           <div className="flex items-center justify-between gap-4 py-2">
             <span>Guest camera</span>
             <input type="hidden" name="guestCamera" value={camera} />
-            <div className="flex rounded-full bg-neutral-800 p-0.5 text-sm">
+            <div className="segmented w-52 shrink-0" role="group" aria-label="Guest camera">
               {(["OPTIONAL", "REQUIRED"] as const).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setCamera(v)}
-                  className={`rounded-full px-3 py-1 ${camera === v ? "bg-white text-black" : "text-neutral-300"}`}
-                >
+                <button key={v} type="button" onClick={() => setCamera(v)} aria-pressed={camera === v}>
                   {v === "OPTIONAL" ? "Their choice" : "Required"}
                 </button>
               ))}
             </div>
           </div>
-          <div className="border-t border-neutral-800" />
+          <div className="border-t border-white/10" />
           <Switch
             name="recordingEnabled"
             label={canRecord ? "Record and transcribe" : "Record and transcribe (coming soon)"}
@@ -142,7 +132,7 @@ function NewCallSheet({ canUseVoiceChanger, canRecord, onClose }: Props & { onCl
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-2xl bg-white px-4 py-3.5 font-semibold text-black hover:bg-neutral-200 disabled:opacity-60"
+          className="btn-primary"
         >
           {pending ? "Creating…" : "Create call link"}
         </button>
@@ -188,7 +178,7 @@ function CreatedCall({
       </p>
       <button
         onClick={copy}
-        className="flex w-full items-center gap-3 rounded-2xl bg-neutral-950 px-4 py-3 text-left"
+        className="flex w-full items-center gap-3 rounded-[18px] bg-white/[0.06] px-4 py-3.5 text-left ring-1 ring-white/10"
         aria-label="Copy link"
       >
         <LinkIcon className="h-5 w-5 shrink-0 text-neutral-400" />
@@ -199,21 +189,21 @@ function CreatedCall({
         {canShare ? (
           <button
             onClick={share}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-green-500 px-4 py-3 font-semibold text-black"
+            className="flex h-12 items-center justify-center gap-2 rounded-full bg-[#30d158] font-semibold text-black transition active:scale-[0.98]"
           >
             <ShareIcon className="h-5 w-5" /> Share
           </button>
         ) : (
           <button
             onClick={copy}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-green-500 px-4 py-3 font-semibold text-black"
+            className="flex h-12 items-center justify-center gap-2 rounded-full bg-[#30d158] font-semibold text-black transition active:scale-[0.98]"
           >
             <CopyIcon className="h-5 w-5" /> {copied ? "Copied" : "Copy link"}
           </button>
         )}
         <Link
           href={`/call/${callId}`}
-          className="flex items-center justify-center rounded-2xl bg-white px-4 py-3 font-semibold text-black"
+          className="flex h-12 items-center justify-center rounded-full bg-white font-semibold text-black transition active:scale-[0.98]"
         >
           Join now
         </Link>

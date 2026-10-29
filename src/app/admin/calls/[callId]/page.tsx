@@ -70,7 +70,7 @@ export default async function AdminCallDetail({ params }: { params: Promise<{ ca
 
       <section>
         <h2 className="mb-2 font-medium">Participants</h2>
-        <ul className="divide-y divide-neutral-800 rounded-2xl border border-neutral-800">
+        <ul className="glass divide-y divide-white/[0.07] overflow-hidden rounded-[22px]">
           {call.participants.map((p) => (
             <li key={p.id} className="space-y-1 p-4">
               <div className="flex flex-wrap items-center gap-2">
@@ -112,7 +112,7 @@ export default async function AdminCallDetail({ params }: { params: Promise<{ ca
         {call.reports.length === 0 ? (
           <Empty>No reports for this call.</Empty>
         ) : (
-          <ul className="divide-y divide-neutral-800 rounded-xl border border-neutral-800">
+          <ul className="glass divide-y divide-white/[0.07] overflow-hidden rounded-[22px]">
             {call.reports.map((r) => (
               <li key={r.id} className="p-3 text-sm">
                 <div className="flex items-center gap-2">

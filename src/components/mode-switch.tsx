@@ -25,7 +25,7 @@ export function ModeSwitch({ current }: { current: Mode }) {
     </Link>
   );
   return (
-    <nav aria-label="Mode" className="flex rounded-full bg-neutral-900 p-1">
+    <nav aria-label="Mode" className="flex rounded-full bg-white/10 p-1 ring-1 ring-white/10 backdrop-blur-xl">
       {item("personal", "/dashboard", "Personal")}
       {item("admin", "/admin", "Admin")}
     </nav>

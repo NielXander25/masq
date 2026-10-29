@@ -24,7 +24,7 @@ export function ShareButton({ url, label = "Share invite" }: { url: string; labe
     <button
       type="button"
       onClick={share}
-      className="rounded-lg border border-neutral-700 px-3 py-1.5 text-sm hover:bg-neutral-800"
+      className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium ring-1 ring-white/10 hover:bg-white/15"
     >
       {copied ? "Link copied" : label}
     </button>

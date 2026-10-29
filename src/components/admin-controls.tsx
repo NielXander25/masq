@@ -69,7 +69,7 @@ export function UserActions({
         defaultValue={plan}
         disabled={pending}
         onChange={(e) => run(() => setPlan({ userId, plan: e.target.value }))}
-        className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
+        className="rounded-full bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/10"
       >
         <option value="FREE">FREE</option>
         <option value="PRO">PRO</option>
@@ -83,7 +83,7 @@ export function UserActions({
           }}
           className={`rounded-md px-2 py-1 text-xs disabled:opacity-50 ${
             banned
-              ? "border border-neutral-700 hover:bg-neutral-800"
+              ? "bg-white/10 ring-1 ring-white/10 hover:bg-white/15"
               : "border border-red-800 text-red-300 hover:bg-red-950"
           }`}
         >

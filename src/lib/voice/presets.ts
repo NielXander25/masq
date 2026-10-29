@@ -5,7 +5,7 @@ export const PRESET_LABELS: Record<VoicePreset, string> = {
   deep: "Deep",
   high: "High",
   robot: "Robot",
-  "neutral-mask": "Neutral mask",
+  "neutral-mask": "Neutral",
 };
 
 export type DspParams = {

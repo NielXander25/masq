@@ -75,7 +75,7 @@ export function DynamicIsland({
                   <button
                     disabled={lobby.busy === waiting.id}
                     onClick={() => lobby.decide(waiting.id, "admit")}
-                    className="flex-1 rounded-full bg-green-500 py-2.5 text-sm font-semibold text-black disabled:opacity-50"
+                    className="flex-1 rounded-full bg-[#30d158] py-2.5 text-sm font-semibold text-black disabled:opacity-50"
                   >
                     Admit
                   </button>

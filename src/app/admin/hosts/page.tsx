@@ -19,7 +19,7 @@ export default async function AdminHosts() {
       {calls.length === 0 ? (
         <Empty>No calls yet.</Empty>
       ) : (
-        <ul className="divide-y divide-neutral-800 rounded-xl border border-neutral-800">
+        <ul className="glass divide-y divide-white/[0.07] overflow-hidden rounded-[22px]">
           {calls.map((c) => (
             <li key={c.id} className="flex flex-col gap-2 p-4 md:flex-row md:items-center md:justify-between">
               <div>

@@ -18,7 +18,6 @@ import {
   type TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
 import { ConnectionState, DisconnectReason, Track } from "livekit-client";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChatPanel, ChatPopups, useChat } from "@/components/chat";
 import { DynamicIsland } from "@/components/dynamic-island";
@@ -27,6 +26,7 @@ import { CameraRequiredGuard, MicButton, PresetSwitcher } from "@/components/mic
 import { PreJoin } from "@/components/prejoin";
 import { ReactionOverlay, ReactionTray, useReactions } from "@/components/reactions";
 import { RejoinButton } from "@/components/rejoin-button";
+import { EmojiIcon, EndedIcon, StatusCard } from "@/components/status-card";
 import { ScriptEditor, ScriptOverlay, useScript } from "@/components/script-prompter";
 import {
   ChatIcon,
@@ -147,14 +147,14 @@ export function CallRoom({
       />
     );
   }
-  if (phase === "ended") return <Message title="This call has ended." />;
+  if (phase === "ended") return <StatusCard icon={<EndedIcon />} title="Call ended" />;
   if (phase === "left") {
     return (
-      <Message title="You left the call.">
+      <Message title="You left the call">
         {isHost ? (
           <button
             onClick={() => location.reload()}
-            className="rounded-full bg-white px-6 py-3 font-semibold text-black hover:bg-neutral-200"
+            className="rounded-full bg-white px-6 py-2.5 font-semibold text-black hover:bg-neutral-200"
           >
             Rejoin call
           </button>
@@ -164,7 +164,7 @@ export function CallRoom({
       </Message>
     );
   }
-  if (phase === "removed") return <Message title="The host removed you from the call." />;
+  if (phase === "removed") return <StatusCard icon={<EmojiIcon>🚪</EmojiIcon>} title="The host removed you from the call" />;
   if (phase === "error") return <Message title={error ?? "Something went wrong."} />;
   if (!conn) return <Message title="Connecting…" spinner />;
 
@@ -538,7 +538,7 @@ function InviteLink({ url, alias, compact = false }: { url: string; alias: strin
   return (
     <div className="space-y-2">
       {!compact && <p className="text-xs text-neutral-400">Invite link</p>}
-      <div className="flex items-center gap-2 rounded-2xl bg-neutral-950 px-3 py-2.5">
+      <div className="flex items-center gap-2 rounded-2xl bg-white/[0.06] px-3 py-2.5">
         <LinkIcon className="h-4 w-4 shrink-0 text-neutral-500" />
         <code className="min-w-0 flex-1 truncate text-left text-sm">{url.replace(/^https?:\/\//, "")}</code>
         <button onClick={copy} aria-label="Copy invite link" className="shrink-0 text-green-400">
@@ -548,7 +548,7 @@ function InviteLink({ url, alias, compact = false }: { url: string; alias: strin
       {canShare && (
         <button
           onClick={() => navigator.share({ title: `Join ${alias} on masqq`, url }).catch(() => {})}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-green-500 px-4 py-2.5 font-semibold text-black"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-[#30d158] px-4 py-2.5 font-semibold text-black"
         >
           <ShareIcon className="h-5 w-5" /> Share invite
         </button>
@@ -559,14 +559,13 @@ function InviteLink({ url, alias, compact = false }: { url: string; alias: strin
 
 function Message({ title, children, spinner }: { title: string; children?: React.ReactNode; spinner?: boolean }) {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-5 px-4 text-center">
-      {spinner && <span className="h-10 w-10 animate-spin rounded-full border-4 border-neutral-700 border-t-white" />}
-      <p className="text-xl font-medium">{title}</p>
+    <StatusCard
+      icon={spinner ? <span className="h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-white" /> : undefined}
+      title={title}
+      home={!spinner}
+    >
       {children}
-      <Link href="/dashboard" className="text-sm text-neutral-400 underline">
-        Back to home
-      </Link>
-    </main>
+    </StatusCard>
   );
 }
 

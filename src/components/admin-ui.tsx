@@ -1,6 +1,6 @@
 export function Stat({ label, value, sub }: { label: string; value: React.ReactNode; sub?: string }) {
   return (
-    <div className="rounded-xl border border-neutral-800 p-4">
+    <div className="glass rounded-[22px] p-4">
       <div className="text-xs text-neutral-400">{label}</div>
       <div className="mt-1 text-2xl font-semibold tabular-nums">{value}</div>
       {sub && <div className="mt-0.5 text-xs text-neutral-500">{sub}</div>}
@@ -13,7 +13,7 @@ export function DailyBars({ title, data }: { title: string; data: { day: string;
   const max = Math.max(1, ...data.map((d) => d.n));
   const total = data.reduce((a, d) => a + d.n, 0);
   return (
-    <section className="rounded-xl border border-neutral-800 p-4">
+    <section className="glass rounded-[22px] p-4">
       <div className="flex items-baseline justify-between">
         <h3 className="text-sm font-medium">{title}</h3>
         <span className="text-xs text-neutral-500">{total} in {data.length} days</span>
@@ -25,7 +25,7 @@ export function DailyBars({ title, data }: { title: string; data: { day: string;
               className="rounded-t bg-neutral-300 group-hover:bg-white"
               style={{ height: `${(d.n / max) * 100}%`, minHeight: d.n ? 3 : 1, opacity: d.n ? 1 : 0.25 }}
             />
-            <span className="pointer-events-none absolute -top-6 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded bg-neutral-800 px-1.5 py-0.5 text-xs group-hover:block">
+            <span className="pointer-events-none absolute -top-6 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-800 px-1.5 py-0.5 text-xs group-hover:block">
               {d.day}: {d.n}
             </span>
           </div>
@@ -58,12 +58,12 @@ const BADGE: Record<string, string> = {
 };
 
 export function Badge({ children }: { children: string }) {
-  return <span className={`rounded px-1.5 py-0.5 text-xs ${BADGE[children] ?? "bg-neutral-800"}`}>{children}</span>;
+  return <span className={`rounded-full px-2 py-0.5 text-xs ${BADGE[children] ?? "bg-neutral-800"}`}>{children}</span>;
 }
 
 export function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-xl border border-dashed border-neutral-800 p-6 text-center text-sm text-neutral-500">
+    <p className="glass rounded-[22px] p-6 text-center text-sm text-neutral-500">
       {children}
     </p>
   );
