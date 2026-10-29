@@ -205,7 +205,7 @@ function MuteToggle({ muted, disabled, onToggle }: { muted: boolean; disabled: b
     const tick = () => {
       const v = Math.min(1, latest.current * 3);
       shown = v > shown ? v : shown * 0.85 + v * 0.15;
-      if (ring.current) ring.current.style.boxShadow = `0 0 0 ${(shown * 10).toFixed(1)}px rgba(74, 222, 128, ${(0.25 + shown * 0.5).toFixed(2)})`;
+      if (ring.current) ring.current.style.boxShadow = `0 0 0 ${(shown * 6).toFixed(1)}px rgba(48, 209, 88, ${(shown * 0.7).toFixed(2)})`;
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -219,8 +219,8 @@ function MuteToggle({ muted, disabled, onToggle }: { muted: boolean; disabled: b
         aria-pressed={muted}
         aria-label={muted ? "Unmute microphone" : "Mute microphone"}
         title={muted ? "Unmute" : "Mute"}
-        className={`flex h-12 w-12 items-center justify-center rounded-full transition disabled:opacity-40 sm:h-14 sm:w-14 ${
-          muted ? "bg-red-500/90 text-white" : "bg-neutral-800 text-white hover:bg-neutral-700"
+        className={`flex h-12 w-12 items-center justify-center rounded-full backdrop-blur-xl transition active:scale-95 disabled:opacity-40 sm:h-14 sm:w-14 ${
+          muted ? "bg-white text-black" : "bg-white/15 text-white hover:bg-white/25"
         }`}
       >
         {muted ? <MicOffIcon /> : <MicIcon />}

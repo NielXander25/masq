@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { GoogleSignInButton } from "@/components/auth-buttons";
 import { AuthScreen } from "@/components/brand-hero";
-import { Logo, LogoMark } from "@/components/logo";
+import { Logo } from "@/components/logo";
 import { Avatar } from "@/components/ui/primitives";
 import { JoinRequest } from "@/components/join-request";
 import { db } from "@/lib/db";
@@ -98,33 +98,39 @@ export default async function InvitePage({ params }: Params) {
   const initialStatus = call.status === "ENDED" ? "ENDED" : (me?.status ?? "NONE");
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
-      <LogoMark className="h-9 w-9" />
+    <AuthScreen>
+      <Logo className="text-[17px]" />
       <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
         <Avatar name={call.hostAlias} size="h-28 w-28 text-4xl" />
-        <p className="mt-5 text-sm text-neutral-400">You&apos;re invited to a call with</p>
-        <h1 className="mt-1 text-3xl font-semibold">{call.hostAlias}</h1>
-        {call.hostTitle && <p className="mt-1 text-neutral-300">{call.hostTitle}</p>}
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
-          <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs text-neutral-300">Anonymous host</span>
+        <p className="mt-5 text-[15px] text-neutral-400">You&apos;re invited to a call with</p>
+        <h1 className="mt-1 text-[28px] font-bold tracking-tight">{call.hostAlias}</h1>
+        {call.hostTitle && <p className="mt-0.5 text-[17px] text-neutral-300">{call.hostTitle}</p>}
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[13px] text-neutral-300 ring-1 ring-white/10">
+            Anonymous host
+          </span>
           {call.recordingEnabled && (
-            <span className="rounded-full bg-red-950 px-3 py-1 text-xs text-red-300">Will be recorded</span>
+            <span className="rounded-full bg-red-500/15 px-3 py-1 text-[13px] text-red-300 ring-1 ring-red-500/20">
+              Will be recorded
+            </span>
           )}
           {call.guestCamera === "REQUIRED" && (
-            <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs text-neutral-300">Camera required</span>
+            <span className="rounded-full bg-white/[0.06] px-3 py-1 text-[13px] text-neutral-300 ring-1 ring-white/10">
+              Camera required
+            </span>
           )}
         </div>
       </div>
-      <div className="flex items-center gap-3 rounded-2xl bg-neutral-900 px-4 py-3">
+      <div className="glass flex w-full items-center gap-3 rounded-[22px] px-4 py-3">
         <Avatar name={user.name ?? user.email ?? "You"} image={user.image} size="h-9 w-9 text-sm" />
         <div className="min-w-0 text-left text-sm">
-          <div className="truncate">Joining as {user.name}</div>
+          <div className="truncate font-medium">Joining as {user.name}</div>
           <div className="truncate text-neutral-400">{user.email}</div>
         </div>
       </div>
-      <div className="mt-4">
+      <div className="mt-3 w-full">
         <JoinRequest callId={callId} alias={call.hostAlias} initialStatus={initialStatus} />
       </div>
-    </main>
+    </AuthScreen>
   );
 }

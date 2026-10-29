@@ -103,7 +103,7 @@ export function ChatPopups({ chat, onOpen }: { chat: Chat; onOpen: () => void })
           key={m.id}
           type="button"
           onClick={onOpen}
-          className="chat-pop pointer-events-auto w-full max-w-sm rounded-3xl bg-neutral-900/90 px-5 py-4 text-center shadow-2xl ring-1 ring-white/15 backdrop-blur-md"
+          className="chat-pop glass glass-strong pointer-events-auto w-full max-w-sm rounded-[28px] px-5 py-4 text-center"
         >
           <div className={`text-xs font-semibold ${m.isHost ? "text-green-400" : "text-neutral-300"}`}>
             {m.identity === chat.myIdentity ? "You" : m.from}

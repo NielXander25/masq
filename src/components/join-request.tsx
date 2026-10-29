@@ -88,7 +88,7 @@ export function JoinRequest({
         });
       }}
     >
-      <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-neutral-900 p-4">
+      <label className="glass flex cursor-pointer items-start gap-3 rounded-[22px] p-4">
         <input
           type="checkbox"
           className="mt-0.5 h-5 w-5 shrink-0 accent-green-500"
@@ -101,7 +101,7 @@ export function JoinRequest({
       <button
         type="submit"
         disabled={!consent || pending}
-        className="w-full rounded-full bg-green-500 px-4 py-4 text-lg font-semibold text-black hover:bg-green-400 disabled:bg-neutral-800 disabled:text-neutral-500"
+        className="h-14 w-full rounded-full bg-white text-[17px] font-semibold text-black shadow-[0_10px_40px_-10px_rgba(255,255,255,0.35)] transition active:scale-[0.98] disabled:bg-white/10 disabled:text-neutral-500 disabled:shadow-none"
       >
         {pending ? "Sending…" : "Ask to join"}
       </button>

@@ -7,6 +7,7 @@ import {
   ParticipantName,
   ParticipantTile,
   RoomAudioRenderer,
+  StartAudio,
   TrackMutedIndicator,
   VideoTrack,
   isTrackReference,
@@ -20,11 +21,13 @@ import { ConnectionState, DisconnectReason, Track } from "livekit-client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChatPanel, ChatPopups, useChat } from "@/components/chat";
-import { JoinRequestCard, LobbyPanel, useLobby, type Lobby } from "@/components/lobby-panel";
+import { DynamicIsland } from "@/components/dynamic-island";
+import { LobbyPanel, useLobby, type Lobby } from "@/components/lobby-panel";
 import { CameraRequiredGuard, MicButton, PresetSwitcher } from "@/components/mic-controls";
 import { PreJoin } from "@/components/prejoin";
 import { ReactionOverlay, ReactionTray, useReactions } from "@/components/reactions";
 import { RejoinButton } from "@/components/rejoin-button";
+import { ScriptEditor, ScriptOverlay, useScript } from "@/components/script-prompter";
 import {
   ChatIcon,
   CopyIcon,
@@ -33,6 +36,7 @@ import {
   PeopleIcon,
   PhoneOffIcon,
   ScreenShareIcon,
+  ScriptIcon,
   ShareIcon,
   SmileIcon,
   VideoIcon,
@@ -70,8 +74,11 @@ export function CallRoom({
   cameraRequired = false,
 }: Props) {
   const voiceOn = isHost && Boolean(voicePreset);
-  const [phase, setPhase] = useState<Phase>("prejoin");
-  const [cameraOn, setCameraOn] = useState(false);
+  // Guests go straight in once admitted (mic on, camera on only if required);
+  // only the host gets a set-up screen, to check the disguised voice.
+  const [phase, setPhase] = useState<Phase>(isHost ? "prejoin" : "connecting");
+  const [cameraOn, setCameraOn] = useState(!isHost && cameraRequired);
+  const [deviceNotice, setDeviceNotice] = useState<string | null>(null);
   const [conn, setConn] = useState<{ token: string; serverUrl: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -179,6 +186,14 @@ export function CallRoom({
         setError(e.message);
         setPhase("error");
       }}
+      // A blocked mic or camera shouldn't end the call: say so and carry on.
+      onMediaDeviceFailure={(_failure, kind) =>
+        setDeviceNotice(
+          kind === "videoinput"
+            ? "Your camera is blocked. Allow it in your browser settings to turn it on."
+            : "Your microphone is blocked. Allow it in your browser settings so others can hear you.",
+        )
+      }
     >
       <InCall
         callId={callId}
@@ -192,6 +207,19 @@ export function CallRoom({
         onEndForEveryone={endCall}
       />
       <RoomAudioRenderer />
+      {/* Only shows if the browser blocked sound until a tap. */}
+      <StartAudio
+        label="Tap to hear the call"
+        className="!fixed !inset-x-6 !top-1/3 !z-50 !mx-auto !max-w-xs !rounded-full !bg-white !px-6 !py-4 !text-base !font-semibold !text-black !shadow-2xl"
+      />
+      {deviceNotice && (
+        <button
+          onClick={() => setDeviceNotice(null)}
+          className="glass fixed inset-x-4 top-24 z-50 mx-auto max-w-sm rounded-2xl px-4 py-3 text-left text-sm text-amber-200"
+        >
+          {deviceNotice}
+        </button>
+      )}
     </LiveKitRoom>
   );
 }
@@ -221,11 +249,12 @@ function InCall({
   const state = useConnectionState();
   const { localParticipant, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const lobby = useLobby(callId, isHost);
-  const [sheet, setSheet] = useState<"people" | "more" | "end" | "chat" | null>(null);
+  const [sheet, setSheet] = useState<"people" | "more" | "end" | "chat" | "script" | null>(null);
   const [canScreenShare, setCanScreenShare] = useState(false);
   const [trayOpen, setTrayOpen] = useState(false);
   const reactions = useReactions();
   const chat = useChat(callId, sheet === "chat");
+  const script = useScript();
   useEffect(() => setCanScreenShare(Boolean(navigator.mediaDevices?.getDisplayMedia)), []);
 
   const subtitle = isHost
@@ -234,91 +263,72 @@ function InCall({
 
   return (
     // Our own full-screen frame: LiveKit's room styles don't lay out children as flex.
-    <div className="fixed inset-0 flex flex-col bg-black text-white">
-      {/* Stage */}
-      <div className="relative min-h-0 flex-1">
-        <Stage alias={alias} isHost={isHost} inviteUrl={inviteUrl} />
-        <ReactionOverlay items={reactions.items} />
-        <ChatPopups chat={chat} onOpen={() => setSheet("chat")} />
-        {trayOpen && (
-          <div className="absolute inset-x-0 bottom-3 z-40 flex justify-center px-3">
-            <ReactionTray onPick={reactions.react} />
-          </div>
-        )}
+    <div className="fixed inset-0 overflow-hidden bg-black text-white">
+      {/* The stage fills the screen; the island and dock float over it. */}
+      <Stage alias={alias} isHost={isHost} inviteUrl={inviteUrl} />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-28 bg-gradient-to-b from-black/60 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-36 bg-gradient-to-t from-black/60 to-transparent" />
+      <ReactionOverlay items={reactions.items} />
+      <ChatPopups chat={chat} onOpen={() => setSheet("chat")} />
+      <ScriptOverlay script={script} onEdit={() => setSheet("script")} />
 
-        {/* Top bar over the video */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-black/80 to-transparent px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))]">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="truncate text-base font-semibold">{alias}</span>
-                {recording && (
-                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-                    REC
-                  </span>
-                )}
-              </div>
-              <div className="truncate text-xs text-neutral-300">
-                {subtitle}
-                {isHost && !voiceOn && <span className="ml-1 text-amber-300">· Real voice (disguise off)</span>}
-              </div>
-            </div>
-            <CallTimer running={state === ConnectionState.Connected} />
-          </div>
-          {state === ConnectionState.Reconnecting && (
-            <p className="mt-2 inline-block rounded-full bg-amber-400 px-3 py-1 text-xs font-semibold text-black">Reconnecting…</p>
-          )}
-          {cameraRequired && <div className="pointer-events-auto"><CameraRequiredGuard alias={alias} /></div>}
-          {isHost && (
-            <div className="pointer-events-none mt-3">
-              <JoinRequestCard lobby={lobby} />
-            </div>
-          )}
+      <DynamicIsland
+        alias={alias}
+        subtitle={subtitle}
+        running={state === ConnectionState.Connected}
+        recording={recording}
+        reconnecting={state === ConnectionState.Reconnecting}
+        realVoice={isHost && !voiceOn}
+        lobby={isHost ? lobby : undefined}
+      />
+      {cameraRequired && (
+        <div className="absolute inset-x-0 top-16 z-30 px-3">
+          <CameraRequiredGuard alias={alias} />
         </div>
-      </div>
+      )}
 
-      {/* Bottom controls, Meet / WhatsApp style */}
-      <div className="z-20 flex items-center justify-center gap-2 bg-black px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 min-[400px]:gap-3 sm:gap-4">
-        <MicButton disguise={voiceOn} callId={callId} />
-        {!isHost && !cameraRequired && (
+      {/* Floating glass dock */}
+      <div className="absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex flex-col items-center gap-2.5 px-2">
+        {trayOpen && <ReactionTray onPick={reactions.react} />}
+        <div className="glass flex items-center gap-2 rounded-[34px] p-2 min-[400px]:gap-2.5 sm:gap-3 sm:p-2.5">
+          <MicButton disguise={voiceOn} callId={callId} />
+          {!isHost && !cameraRequired && (
+            <RoundButton
+              label={isCameraEnabled ? "Turn camera off" : "Turn camera on"}
+              tone={isCameraEnabled ? "default" : "off"}
+              onClick={() => localParticipant.setCameraEnabled(!isCameraEnabled)}
+            >
+              {isCameraEnabled ? <VideoIcon /> : <VideoOffIcon />}
+            </RoundButton>
+          )}
           <RoundButton
-            label={isCameraEnabled ? "Turn camera off" : "Turn camera on"}
-            tone={isCameraEnabled ? "default" : "off"}
-            onClick={() => localParticipant.setCameraEnabled(!isCameraEnabled)}
+            label={trayOpen ? "Close reactions" : "Send a reaction"}
+            pressed={trayOpen}
+            tone={trayOpen ? "light" : "default"}
+            onClick={() => setTrayOpen((o) => !o)}
           >
-            {isCameraEnabled ? <VideoIcon /> : <VideoOffIcon />}
+            <SmileIcon />
           </RoundButton>
-        )}
-        <RoundButton
-          label={trayOpen ? "Close reactions" : "Send a reaction"}
-          pressed={trayOpen}
-          tone={trayOpen ? "light" : "default"}
-          onClick={() => setTrayOpen((o) => !o)}
-        >
-          <SmileIcon />
-        </RoundButton>
-        <RoundButton label="Messages" onClick={() => setSheet("chat")} badge={chat.unread}>
-          <ChatIcon />
-        </RoundButton>
-        {isHost && (
-          <RoundButton label="People" onClick={() => setSheet("people")} badge={lobby.waiting.length}>
-            <PeopleIcon />
+          <RoundButton label="Messages" onClick={() => setSheet("chat")} badge={chat.unread}>
+            <ChatIcon />
           </RoundButton>
-        )}
-        {(isHost || canScreenShare) && (
+          {isHost && (
+            <RoundButton label="People" onClick={() => setSheet("people")} badge={lobby.waiting.length}>
+              <PeopleIcon />
+            </RoundButton>
+          )}
           <RoundButton label="More options" onClick={() => setSheet("more")}>
             <MoreIcon />
           </RoundButton>
-        )}
-        <button
-          onClick={() => (isHost ? setSheet("end") : room.disconnect())}
-          aria-label={isHost ? "Hang up" : "Leave call"}
-          title={isHost ? "Hang up" : "Leave call"}
-          className="flex h-12 w-16 items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-500 sm:h-14 sm:w-20"
-        >
-          <PhoneOffIcon />
-        </button>
+          <button
+            onClick={() => (isHost ? setSheet("end") : room.disconnect())}
+            aria-label={isHost ? "Hang up" : "Leave call"}
+            title={isHost ? "Hang up" : "Leave call"}
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#ff3b30] text-white shadow-[0_6px_20px_rgba(255,59,48,0.45)] transition active:scale-95 sm:h-14 sm:w-14"
+          >
+            <PhoneOffIcon />
+          </button>
+        </div>
       </div>
 
       <Sheet open={sheet === "chat"} onClose={() => setSheet(null)} title="Messages">
@@ -340,6 +350,18 @@ function InCall({
               <PresetSwitcher />
             </div>
           )}
+          <button
+            onClick={() => setSheet("script")}
+            className="flex w-full items-center gap-3 rounded-2xl bg-white/10 px-4 py-3.5 text-left"
+          >
+            <ScriptIcon className="h-5 w-5" />
+            <span className="flex-1">
+              <span className="block font-medium">Script</span>
+              <span className="block text-xs text-neutral-400">
+                {script.text ? "Read it on screen · only you can see it" : "Read from your notes · only you can see it"}
+              </span>
+            </span>
+          </button>
           {isHost && inviteUrl && <InviteLink url={inviteUrl} alias={alias} />}
           {!isHost && canScreenShare && (
             <button
@@ -347,13 +369,17 @@ function InCall({
                 void localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
                 setSheet(null);
               }}
-              className="flex w-full items-center gap-3 rounded-2xl bg-neutral-800 px-4 py-3"
+              className="flex w-full items-center gap-3 rounded-2xl bg-white/10 px-4 py-3.5"
             >
               <ScreenShareIcon className="h-5 w-5" />
               {isScreenShareEnabled ? "Stop sharing screen" : "Share screen"}
             </button>
           )}
         </div>
+      </Sheet>
+
+      <Sheet open={sheet === "script"} onClose={() => setSheet(null)} title="Script">
+        <ScriptEditor script={script} onRead={() => setSheet(null)} />
       </Sheet>
 
       <Sheet open={sheet === "end"} onClose={() => setSheet(null)} title="Leave the call?">
@@ -369,7 +395,7 @@ function InCall({
           </button>
           <button
             onClick={() => room.disconnect()}
-            className="w-full rounded-full bg-neutral-800 px-4 py-3.5 font-semibold hover:bg-neutral-700"
+            className="w-full rounded-full bg-white/10 px-4 py-3.5 font-semibold hover:bg-white/15"
           >
             Just leave (you can rejoin)
           </button>
@@ -401,8 +427,8 @@ function Stage({ alias, isHost, inviteUrl }: { alias: string; isHost: boolean; i
   if (others.length === 0) {
     return (
       <div className="absolute inset-0">
-        {local[0] && <CallTile trackRef={local[0]} className="h-full w-full" />}
-        <div className="absolute inset-x-4 bottom-6 z-10 mx-auto max-w-sm rounded-3xl bg-neutral-900/90 p-4 text-center shadow-xl ring-1 ring-white/10 backdrop-blur">
+        {local[0] && <CallTile trackRef={local[0]} className="call-tile-full h-full w-full" />}
+        <div className="glass absolute inset-x-4 bottom-32 z-20 mx-auto max-w-sm rounded-[28px] p-4 text-center">
           <p className="font-medium">Waiting for others to join</p>
           {isHost && inviteUrl ? (
             <div className="mt-3">
@@ -419,9 +445,9 @@ function Stage({ alias, isHost, inviteUrl }: { alias: string; isHost: boolean; i
   if (others.length === 1) {
     return (
       <div className="absolute inset-0">
-        <CallTile trackRef={others[0]} className="h-full w-full" />
+        <CallTile trackRef={others[0]} className="call-tile-full h-full w-full" />
         {local[0] && (
-          <div className="absolute bottom-4 right-4 z-10 aspect-[3/4] w-28 overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/20 sm:w-40">
+          <div className="absolute bottom-32 right-3 z-20 aspect-[3/4] w-28 overflow-hidden rounded-[22px] shadow-[0_12px_40px_rgba(0,0,0,0.6)] ring-1 ring-white/20 sm:w-40">
             <CallTile trackRef={local[0]} className="h-full w-full" small />
           </div>
         )}
@@ -437,10 +463,10 @@ function Stage({ alias, isHost, inviteUrl }: { alias: string; isHost: boolean; i
   const cols = n <= 6 ? "grid-cols-2" : n <= 12 ? "grid-cols-3 lg:grid-cols-4" : "grid-cols-3 sm:grid-cols-4 lg:grid-cols-5";
   const minRow = n <= 4 ? "auto-rows-[minmax(160px,1fr)]" : n <= 6 ? "auto-rows-[minmax(140px,1fr)]" : "auto-rows-[minmax(118px,1fr)]";
   return (
-    <div className="absolute inset-0 overflow-y-auto overscroll-contain px-1.5 pb-1.5 pt-20">
-      <div className={`grid min-h-full gap-1.5 ${cols} ${minRow}`}>
+    <div className="absolute inset-0 overflow-y-auto overscroll-contain px-2 pb-28 pt-14 sm:pb-32">
+      <div className={`grid min-h-full gap-2 ${cols} ${minRow}`}>
         {all.map((t) => (
-          <CallTile key={key(t)} trackRef={t} className="rounded-2xl" compact={compact} />
+          <CallTile key={key(t)} trackRef={t} className="overflow-hidden !rounded-[22px]" compact={compact} />
         ))}
       </div>
     </div>
@@ -528,22 +554,6 @@ function InviteLink({ url, alias, compact = false }: { url: string; alias: strin
       )}
     </div>
   );
-}
-
-function CallTimer({ running }: { running: boolean }) {
-  const [start] = useState(() => Date.now());
-  const [now, setNow] = useState(start);
-  useEffect(() => {
-    if (!running) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [running]);
-  const s = Math.floor((now - start) / 1000);
-  const h = Math.floor(s / 3600);
-  const mm = String(Math.floor((s % 3600) / 60)).padStart(h ? 2 : 1, "0");
-  const ss = String(s % 60).padStart(2, "0");
-  const text = h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
-  return <span className="shrink-0 font-mono text-sm tabular-nums text-neutral-300">{text}</span>;
 }
 
 function Message({ title, children, spinner }: { title: string; children?: React.ReactNode; spinner?: boolean }) {

@@ -64,7 +64,7 @@ export function ReactionOverlay({ items }: { items: Floating[] }) {
       {items.map((r) => (
         <div
           key={r.id}
-          className="reaction-float absolute bottom-24 flex flex-col items-center"
+          className="reaction-float absolute bottom-40 flex flex-col items-center"
           style={{ left: `${r.x}%`, ["--drift" as string]: `${r.drift}px` }}
         >
           <span className="text-5xl drop-shadow-lg">{r.emoji}</span>
@@ -83,7 +83,7 @@ export function ReactionTray({ onPick }: { onPick: (e: Emoji) => void }) {
     <div
       role="toolbar"
       aria-label="Send a reaction"
-      className="flex max-w-full gap-0.5 overflow-x-auto rounded-full bg-neutral-900/95 p-1.5 shadow-2xl ring-1 ring-white/10 backdrop-blur"
+      className="glass flex max-w-full gap-0.5 overflow-x-auto rounded-full p-1.5"
     >
       {REACTIONS.map((e) => (
         <button

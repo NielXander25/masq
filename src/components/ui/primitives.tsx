@@ -24,9 +24,10 @@ export function RoundButton({
   className?: string;
 }) {
   const tones = {
-    default: "bg-neutral-800 text-white hover:bg-neutral-700",
-    off: "bg-red-500/90 text-white hover:bg-red-500",
-    danger: "bg-red-600 text-white hover:bg-red-500",
+    // iOS call controls: frosted glass; a switched-off control turns white.
+    default: "bg-white/15 text-white hover:bg-white/25",
+    off: "bg-white text-black hover:bg-neutral-200",
+    danger: "bg-[#ff3b30] text-white hover:bg-red-500",
     light: "bg-white text-black hover:bg-neutral-200",
   };
   return (
@@ -37,11 +38,11 @@ export function RoundButton({
       aria-pressed={pressed}
       onClick={onClick}
       disabled={disabled}
-      className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition disabled:opacity-40 sm:h-14 sm:w-14 ${tones[tone]} ${className}`}
+      className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full backdrop-blur-xl transition active:scale-95 disabled:opacity-40 sm:h-14 sm:w-14 ${tones[tone]} ${className}`}
     >
       {children}
       {badge ? (
-        <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400 px-1 text-[11px] font-bold text-black">
+        <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[11px] font-bold text-white ring-2 ring-black/60">
           {badge}
         </span>
       ) : null}
@@ -71,13 +72,13 @@ export function Sheet({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={title}>
-      <button aria-label="Close" className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl bg-neutral-900 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-white shadow-2xl sm:max-w-md sm:rounded-3xl">
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-700 sm:hidden" />
+      <button aria-label="Close" className="sheet-backdrop absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="sheet-panel relative max-h-[92dvh] w-full overflow-y-auto rounded-t-[32px] border-t border-white/10 bg-neutral-900/80 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-white shadow-[0_-10px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl backdrop-saturate-150 sm:max-w-md sm:rounded-[32px] sm:border">
+        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-white/25 sm:hidden" />
         {title && (
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold">{title}</h2>
-            <button onClick={onClose} aria-label="Close" className="rounded-full p-1.5 text-neutral-400 hover:bg-neutral-800">
+            <button onClick={onClose} aria-label="Close" className="rounded-full bg-white/10 p-1.5 text-neutral-300 hover:bg-white/20">
               <CloseIcon className="h-5 w-5" />
             </button>
           </div>

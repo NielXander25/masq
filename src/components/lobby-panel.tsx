@@ -76,42 +76,6 @@ export function useLobby(callId: string, enabled: boolean) {
 
 export type Lobby = ReturnType<typeof useLobby>;
 
-/** Meet-style card at the top of the call: "Gina wants to join". */
-export function JoinRequestCard({ lobby }: { lobby: Lobby }) {
-  const g = lobby.waiting[0];
-  if (!g) return null;
-  const more = lobby.waiting.length - 1;
-  return (
-    <div className="pointer-events-auto mx-auto w-full max-w-md rounded-2xl bg-neutral-900/95 p-3 shadow-2xl ring-1 ring-white/10 backdrop-blur">
-      <div className="flex items-center gap-3">
-        <Avatar name={g.name ?? g.email} image={g.image} />
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-medium">{g.name ?? g.email} wants to join</div>
-          <div className="truncate text-xs text-neutral-400">{g.email}</div>
-        </div>
-      </div>
-      {lobby.error && <p className="mt-2 rounded bg-red-950 px-2 py-1 text-sm text-red-300">{lobby.error}</p>}
-      <div className="mt-3 flex gap-2">
-        <button
-          disabled={lobby.busy === g.id}
-          onClick={() => lobby.decide(g.id, "deny")}
-          className="flex-1 rounded-full bg-neutral-800 px-3 py-2 text-sm font-medium hover:bg-neutral-700 disabled:opacity-50"
-        >
-          Deny
-        </button>
-        <button
-          disabled={lobby.busy === g.id}
-          onClick={() => lobby.decide(g.id, "admit")}
-          className="flex-1 rounded-full bg-green-500 px-3 py-2 text-sm font-semibold text-black hover:bg-green-400 disabled:opacity-50"
-        >
-          Admit
-        </button>
-      </div>
-      {more > 0 && <p className="mt-2 text-center text-xs text-neutral-400">+{more} more waiting · open People</p>}
-    </div>
-  );
-}
-
 /** The People sheet's contents. */
 export function LobbyPanel({ lobby }: { lobby: Lobby }) {
   return (

@@ -88,3 +88,88 @@ body {
 .chat-pop {
   animation: chat-pop 5s ease-out forwards;
 }
+
+/* ---- iPhone-style surfaces ---- */
+.glass {
+  background: rgba(40, 40, 44, 0.5);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.pill-btn {
+  display: inline-flex;
+  height: 2.25rem;
+  min-width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0 0.75rem;
+  font-weight: 600;
+}
+/* The island springs between its compact and expanded shapes. */
+.island {
+  transition: width 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15), border-radius 0.45s ease;
+}
+.island-content {
+  animation: island-in 0.35s ease-out;
+}
+@keyframes island-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.speak-bar {
+  height: 40%;
+  animation: speak 0.8s ease-in-out infinite;
+}
+@keyframes speak {
+  0%, 100% { height: 30%; }
+  50% { height: 100%; }
+}
+/* Sheets slide up like iOS. */
+.sheet-panel {
+  animation: sheet-up 0.32s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.sheet-backdrop {
+  animation: fade-in 0.25s ease-out;
+}
+@keyframes sheet-up {
+  from { transform: translateY(40px); opacity: 0.6; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+/* Name labels on tiles: small frosted capsules. */
+.lk-participant-tile .lk-participant-metadata-item {
+  background: rgba(0, 0, 0, 0.35);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-radius: 9999px;
+  padding: 0.2rem 0.6rem;
+}
+.call-tile-compact .lk-participant-metadata-item {
+  border-radius: 0.75rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .island, .island-content, .sheet-panel, .sheet-backdrop, .speak-bar { animation: none; transition: none; }
+}
+/* Full-screen tiles: keep the name above the floating dock. */
+.call-tile-full .lk-participant-metadata {
+  bottom: calc(6.5rem + env(safe-area-inset-bottom));
+  left: 0.75rem;
+  right: 0.75rem;
+}
+@media (min-width: 640px) {
+  .call-tile-full .lk-participant-metadata { bottom: calc(7.5rem + env(safe-area-inset-bottom)); }
+}
+.glass-strong {
+  background: rgba(30, 30, 34, 0.78);
+}
+/* Let the island finish growing before its contents appear. */
+.island-content {
+  animation-delay: 0.12s;
+  animation-fill-mode: backwards;
+}
