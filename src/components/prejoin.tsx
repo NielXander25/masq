@@ -30,6 +30,12 @@ export function PreJoin({ alias, title, isHost, disguise, cameraRequired = false
   const [micError, setMicError] = useState<string | null>(null);
   const [monitor, setMonitor] = useState(false);
   const [noEchoCancel, setNoEchoCancel] = useState(false);
+  const [isIPhone, setIsIPhone] = useState(false);
+  useEffect(() => {
+    // iPadOS reports itself as a Mac, so also check for a touch screen.
+    const ua = navigator.userAgent;
+    setIsIPhone(/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1));
+  }, []);
   const [camera, setCamera] = useState<MediaStream | null>(null);
   const [camError, setCamError] = useState<string | null>(null);
   const video = useRef<HTMLVideoElement>(null);
@@ -189,6 +195,11 @@ export function PreJoin({ alias, title, isHost, disguise, cameraRequired = false
         {isHost && !disguise && (
           <p className="rounded-2xl border border-amber-700 bg-amber-950 px-3 py-2 text-center text-sm text-amber-200">
             Voice disguise is off for this call: guests will hear your real voice.
+          </p>
+        )}
+        {isHost && isIPhone && (
+          <p className="glass rounded-2xl px-3 py-2.5 text-center text-sm text-neutral-200">
+            📱 Keep masqq open while you talk. iPhones pause the mic when you leave the app.
           </p>
         )}
         {noEchoCancel && (
