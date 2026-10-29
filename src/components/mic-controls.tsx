@@ -24,9 +24,27 @@ function useSendLevel() {
 }
 
 function NativeMicButton() {
-  const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
+  const { localParticipant, isMicrophoneEnabled, microphoneTrack } = useLocalParticipant();
   const state = useConnectionState();
   const [busy, setBusy] = useState(false);
+
+  // Coming back from another app: if the phone took the microphone away, reopen it.
+  useEffect(() => {
+    const track = microphoneTrack?.track as LocalAudioTrack | undefined;
+    if (!track) return;
+    const check = () => {
+      if (document.visibilityState !== "visible") return;
+      if (track.mediaStreamTrack?.readyState === "ended" && !microphoneTrack?.isMuted) {
+        void track.restartTrack().catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
+    return () => {
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
+    };
+  }, [microphoneTrack]);
   const muted = !isMicrophoneEnabled;
   return (
     <MuteToggle
@@ -75,8 +93,9 @@ function DisguisedMicButton({ callId }: { callId: string }) {
   }, [room, state, track]);
 
   async function toggle() {
-    // A tap: also wake the audio engine if the browser paused it.
-    void useMicStore.getState().processor?.resume?.();
+    // A tap: also wake the audio engine (and mic) if the phone paused them.
+    const proc = useMicStore.getState().processor;
+    void (proc?.recover ?? proc?.resume)?.call(proc);
     const p = pub.current;
     if (!p) return;
     if (p.isMuted) await p.unmute();
@@ -121,6 +140,8 @@ function VoiceHealthNotice({ muted, callId }: { muted: boolean; callId: string }
             outLevel: h.outLevel === null ? null : +h.outLevel.toFixed(4),
             sampleRate: h.sampleRate,
             trackState: h.trackState,
+            inputState: h.inputState,
+            recoveries: h.recoveries,
             muted,
             ua: navigator.userAgent.slice(0, 200),
           },
@@ -143,7 +164,7 @@ function VoiceHealthNotice({ muted, callId }: { muted: boolean; callId: string }
     if (!processor?.health) return;
     const timer = setInterval(() => {
       const h = processor.health!();
-      setSuspended(h.state !== "running");
+      setSuspended(h.state !== "running" || h.inputState === "ended");
       // Mic hears something but the disguise outputs nothing.
       const silent = h.inLevel !== null && h.outLevel !== null && h.inLevel > 0.003 && h.outLevel < 0.0003;
       setSilentFor((n) => (silent ? n + 1 : 0));
@@ -154,7 +175,7 @@ function VoiceHealthNotice({ muted, callId }: { muted: boolean; callId: string }
   if (suspended) {
     return (
       <button
-        onClick={() => processor?.resume?.()}
+        onClick={() => void (processor?.recover ?? processor?.resume)?.call(processor)}
         className="fixed inset-x-4 bottom-28 z-40 mx-auto max-w-sm rounded-2xl bg-amber-400 px-4 py-3 text-sm font-semibold text-black shadow-xl"
       >
         Tap to turn your voice back on

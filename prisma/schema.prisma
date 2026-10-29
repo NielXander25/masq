@@ -129,6 +129,7 @@ model Call {
   recordings          Recording[]
   transcript          Transcript?
   reports             Report[]
+  messages            CallMessage[]
 }
 
 model Participant {
@@ -144,8 +145,22 @@ model Participant {
   joinedAt        DateTime?
   leftAt          DateTime?
   recordings      Recording[]
+  messages        CallMessage[]
 
   @@unique([callId, userId])
+}
+
+// In-call chat. Kept only while the call is live; deleted when it ends.
+model CallMessage {
+  id            String      @id @default(cuid())
+  callId        String
+  call          Call        @relation(fields: [callId], references: [id], onDelete: Cascade)
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  text          String
+  createdAt     DateTime    @default(now())
+
+  @@index([callId, createdAt])
 }
 
 model Recording {

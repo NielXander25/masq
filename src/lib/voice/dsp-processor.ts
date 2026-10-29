@@ -14,6 +14,10 @@ export class DspVoiceProcessor implements VoiceProcessor {
   private inAnalyser: AnalyserNode | null = null;
   private outAnalyser: AnalyserNode | null = null;
   private meterBuf = new Float32Array(1024);
+  private source: MediaStreamAudioSourceNode | null = null;
+  private recovering: Promise<void> | null = null;
+  private recoveries = 0;
+  private cleanup: (() => void) | null = null;
 
   async start(stream: MediaStream, mode: VoiceMode) {
     if (typeof AudioWorkletNode === "undefined") {
@@ -25,6 +29,7 @@ export class DspVoiceProcessor implements VoiceProcessor {
     await ctx.audioWorklet.addModule(WORKLET_URL);
 
     const source = ctx.createMediaStreamSource(stream);
+    this.source = source;
     const node = new AudioWorkletNode(ctx, "voice-shifter", {
       numberOfInputs: 1,
       numberOfOutputs: 1,
@@ -46,11 +51,84 @@ export class DspVoiceProcessor implements VoiceProcessor {
     this.node = node;
     this.setPreset(mode);
 
+    // Keep-alive: phones suspend a silent audio engine when the app goes to
+    // the background, which would cut the host off. A sub-audible 10 Hz tone
+    // at -60 dB counts as "playing" but can't be heard.
+    const hum = ctx.createOscillator();
+    const humGain = ctx.createGain();
+    hum.frequency.value = 10;
+    humGain.gain.value = 0.001;
+    hum.connect(humGain).connect(ctx.destination);
+    hum.start();
+
     if (ctx.state === "suspended") await ctx.resume();
     const track = dest.stream.getAudioTracks()[0];
     if (!track) throw new Error("Could not create the disguised audio track");
     this.track = track;
+    this.watch(stream);
     return track;
+  }
+
+  /**
+   * Switching apps can suspend the audio engine or end the microphone. Bring
+   * both back as soon as the page is visible again, without republishing: the
+   * output track guests receive stays the same.
+   */
+  private watch(stream: MediaStream) {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void this.recover();
+    };
+    const onState = () => {
+      if (this.ctx && this.ctx.state !== "running" && document.visibilityState === "visible") void this.recover();
+    };
+    this.watchInput(stream);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", onVisible);
+    window.addEventListener("focus", onVisible);
+    this.ctx?.addEventListener("statechange", onState);
+    const ctx = this.ctx;
+    this.cleanup = () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", onVisible);
+      window.removeEventListener("focus", onVisible);
+      ctx?.removeEventListener("statechange", onState);
+    };
+  }
+
+  private watchInput(stream: MediaStream) {
+    // The phone took the mic away (another app, a phone call, the OS): get it back.
+    stream.getAudioTracks().forEach((t) => t.addEventListener("ended", () => void this.recover()));
+  }
+
+  /** Resume the engine and reopen the microphone if it was taken away. */
+  recover(): Promise<void> {
+    if (this.recovering) return this.recovering;
+    this.recovering = (async () => {
+      try {
+        await this.resume().catch(() => {});
+        const ended = !this.input || this.input.getAudioTracks().every((t) => t.readyState === "ended");
+        if (!ended || !this.ctx || !this.node) return;
+        const stream = await getMicrophone();
+        if (!this.ctx || !this.node) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        const source = this.ctx.createMediaStreamSource(stream);
+        source.connect(this.node);
+        if (this.inAnalyser) source.connect(this.inAnalyser);
+        this.source?.disconnect();
+        this.input?.getTracks().forEach((t) => t.stop());
+        this.source = source;
+        this.input = stream;
+        this.watchInput(stream);
+        this.recoveries++;
+      } catch {
+        // Not allowed while hidden; the next visibility change retries.
+      } finally {
+        this.recovering = null;
+      }
+    })();
+    return this.recovering;
   }
 
   setPreset(mode: VoiceMode) {
@@ -73,6 +151,8 @@ export class DspVoiceProcessor implements VoiceProcessor {
       outLevel: this.levels?.out ?? null,
       sampleRate: this.ctx?.sampleRate ?? null,
       trackState: this.track?.readyState ?? null,
+      inputState: this.input?.getAudioTracks()[0]?.readyState ?? null,
+      recoveries: this.recoveries,
     };
   }
 
@@ -92,6 +172,8 @@ export class DspVoiceProcessor implements VoiceProcessor {
   }
 
   stop() {
+    this.cleanup?.();
+    this.cleanup = null;
     this.input?.getTracks().forEach((t) => t.stop());
     void this.ctx?.close();
     this.ctx = null;
@@ -100,6 +182,7 @@ export class DspVoiceProcessor implements VoiceProcessor {
     this.monitoring = false;
     this.inAnalyser = null;
     this.outAnalyser = null;
+    this.source = null;
   }
 }
 

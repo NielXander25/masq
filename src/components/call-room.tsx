@@ -19,12 +19,14 @@ import {
 import { ConnectionState, DisconnectReason, Track } from "livekit-client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ChatPanel, ChatPopups, useChat } from "@/components/chat";
 import { JoinRequestCard, LobbyPanel, useLobby, type Lobby } from "@/components/lobby-panel";
 import { CameraRequiredGuard, MicButton, PresetSwitcher } from "@/components/mic-controls";
 import { PreJoin } from "@/components/prejoin";
 import { ReactionOverlay, ReactionTray, useReactions } from "@/components/reactions";
 import { RejoinButton } from "@/components/rejoin-button";
 import {
+  ChatIcon,
   CopyIcon,
   LinkIcon,
   MoreIcon,
@@ -55,7 +57,7 @@ type Props = {
   /** Guest only: the host requires cameras on. */
   cameraRequired?: boolean;
 };
-type Phase = "prejoin" | "connecting" | "in-call" | "left" | "ended" | "error";
+type Phase = "prejoin" | "connecting" | "in-call" | "left" | "removed" | "ended" | "error";
 
 export function CallRoom({
   callId,
@@ -117,7 +119,7 @@ export function CallRoom({
       );
       return;
     }
-    if (reason === DisconnectReason.PARTICIPANT_REMOVED) return setPhase("left");
+    if (reason === DisconnectReason.PARTICIPANT_REMOVED) return setPhase(isHost ? "left" : "removed");
   }
 
   if (phase === "prejoin") {
@@ -154,6 +156,7 @@ export function CallRoom({
       </Message>
     );
   }
+  if (phase === "removed") return <Message title="The host removed you from the call." />;
   if (phase === "error") return <Message title={error ?? "Something went wrong."} />;
   if (!conn) return <Message title="Connecting…" spinner />;
 
@@ -218,10 +221,11 @@ function InCall({
   const state = useConnectionState();
   const { localParticipant, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const lobby = useLobby(callId, isHost);
-  const [sheet, setSheet] = useState<"people" | "more" | "end" | null>(null);
+  const [sheet, setSheet] = useState<"people" | "more" | "end" | "chat" | null>(null);
   const [canScreenShare, setCanScreenShare] = useState(false);
   const [trayOpen, setTrayOpen] = useState(false);
   const reactions = useReactions();
+  const chat = useChat(callId, sheet === "chat");
   useEffect(() => setCanScreenShare(Boolean(navigator.mediaDevices?.getDisplayMedia)), []);
 
   const subtitle = isHost
@@ -235,6 +239,7 @@ function InCall({
       <div className="relative min-h-0 flex-1">
         <Stage alias={alias} isHost={isHost} inviteUrl={inviteUrl} />
         <ReactionOverlay items={reactions.items} />
+        <ChatPopups chat={chat} onOpen={() => setSheet("chat")} />
         {trayOpen && (
           <div className="absolute inset-x-0 bottom-3 z-40 flex justify-center px-3">
             <ReactionTray onPick={reactions.react} />
@@ -274,7 +279,7 @@ function InCall({
       </div>
 
       {/* Bottom controls, Meet / WhatsApp style */}
-      <div className="z-20 flex items-center justify-center gap-3 bg-black px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:gap-4">
+      <div className="z-20 flex items-center justify-center gap-2 bg-black px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 min-[400px]:gap-3 sm:gap-4">
         <MicButton disguise={voiceOn} callId={callId} />
         {!isHost && !cameraRequired && (
           <RoundButton
@@ -292,6 +297,9 @@ function InCall({
           onClick={() => setTrayOpen((o) => !o)}
         >
           <SmileIcon />
+        </RoundButton>
+        <RoundButton label="Messages" onClick={() => setSheet("chat")} badge={chat.unread}>
+          <ChatIcon />
         </RoundButton>
         {isHost && (
           <RoundButton label="People" onClick={() => setSheet("people")} badge={lobby.waiting.length}>
@@ -312,6 +320,10 @@ function InCall({
           <PhoneOffIcon />
         </button>
       </div>
+
+      <Sheet open={sheet === "chat"} onClose={() => setSheet(null)} title="Messages">
+        <ChatPanel chat={chat} />
+      </Sheet>
 
       <Sheet open={sheet === "people"} onClose={() => setSheet(null)} title="People">
         {inviteUrl && <InviteLink url={inviteUrl} alias={alias} />}
@@ -418,12 +430,19 @@ function Stage({ alias, isHost, inviteUrl }: { alias: string; isHost: boolean; i
   }
 
   const all = [...others, ...local];
-  const cols = all.length <= 4 ? "grid-cols-2" : "grid-cols-2 md:grid-cols-3";
+  // Up to 6: two columns that fill the screen. Bigger calls: three columns on
+  // phones (more on wider screens) with a minimum tile height, scrolling if needed.
+  const n = all.length;
+  const compact = n > 6;
+  const cols = n <= 6 ? "grid-cols-2" : n <= 12 ? "grid-cols-3 lg:grid-cols-4" : "grid-cols-3 sm:grid-cols-4 lg:grid-cols-5";
+  const minRow = n <= 4 ? "auto-rows-[minmax(160px,1fr)]" : n <= 6 ? "auto-rows-[minmax(140px,1fr)]" : "auto-rows-[minmax(118px,1fr)]";
   return (
-    <div className={`absolute inset-0 grid auto-rows-fr gap-1.5 overflow-y-auto p-1.5 pt-20 ${cols}`}>
-      {all.map((t) => (
-        <CallTile key={key(t)} trackRef={t} className="min-h-[160px] rounded-2xl" />
-      ))}
+    <div className="absolute inset-0 overflow-y-auto overscroll-contain px-1.5 pb-1.5 pt-20">
+      <div className={`grid min-h-full gap-1.5 ${cols} ${minRow}`}>
+        {all.map((t) => (
+          <CallTile key={key(t)} trackRef={t} className="rounded-2xl" compact={compact} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -433,10 +452,13 @@ function CallTile({
   trackRef,
   className = "",
   small = false,
+  compact = false,
 }: {
   trackRef: TrackReferenceOrPlaceholder;
   className?: string;
   small?: boolean;
+  /** Many people on screen: smaller avatar, name stays readable. */
+  compact?: boolean;
 }) {
   const isCamera = trackRef.source === Track.Source.Camera;
   const name = trackRef.participant.name || trackRef.participant.identity;
@@ -444,11 +466,17 @@ function CallTile({
   const avatarName = name.split(" · ")[0];
   const hasVideo = isTrackReference(trackRef) && !trackRef.publication.isMuted;
   return (
-    <ParticipantTile trackRef={trackRef} className={`!rounded-none bg-neutral-900 ${className}`}>
+    <ParticipantTile
+      trackRef={trackRef}
+      className={`!rounded-none bg-neutral-900 ${compact ? "call-tile-compact" : ""} ${className}`}
+    >
       {isTrackReference(trackRef) && <VideoTrack trackRef={trackRef} className="!object-cover" />}
       {!hasVideo && (
         <div className="lk-participant-placeholder !bg-neutral-900">
-          <Avatar name={avatarName} size={small ? "h-12 w-12 text-lg" : "h-28 w-28 text-4xl"} />
+          <Avatar
+            name={avatarName}
+            size={small || compact ? "h-12 w-12 text-lg" : "h-28 w-28 text-4xl"}
+          />
         </div>
       )}
       <div className="lk-participant-metadata">
@@ -465,7 +493,7 @@ function CallTile({
             <ParticipantName>&apos;s screen</ParticipantName>
           )}
         </div>
-        {!small && <ConnectionQualityIndicator className="lk-participant-metadata-item" />}
+        {!small && !compact && <ConnectionQualityIndicator className="lk-participant-metadata-item" />}
       </div>
     </ParticipantTile>
   );
@@ -511,7 +539,10 @@ function CallTimer({ running }: { running: boolean }) {
     return () => clearInterval(t);
   }, [running]);
   const s = Math.floor((now - start) / 1000);
-  const text = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const h = Math.floor(s / 3600);
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(h ? 2 : 1, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  const text = h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
   return <span className="shrink-0 font-mono text-sm tabular-nums text-neutral-300">{text}</span>;
 }
 

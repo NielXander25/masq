@@ -1,4 +1,4 @@
-import { AccessToken, RoomServiceClient, TrackSource } from "livekit-server-sdk";
+import { AccessToken, DataPacket_Kind, RoomServiceClient, TrackSource } from "livekit-server-sdk";
 import { env } from "@/env";
 
 export const TOKEN_TTL_SECONDS = 2 * 60 * 60;
@@ -61,9 +61,43 @@ export async function createToken(input: TokenInput) {
   return at.toJwt();
 }
 
-export async function deleteRoom(roomName: string) {
+function roomService() {
   const { url, key, secret } = config();
-  const client = new RoomServiceClient(url.replace(/^ws/, "http"), key, secret);
+  return new RoomServiceClient(url.replace(/^ws/, "http"), key, secret);
+}
+
+/** Mute someone's published microphone. Returns false if they have no live mic. */
+export async function muteParticipantMic(roomName: string, identity: string) {
+  const client = roomService();
+  let info;
+  try {
+    info = await client.getParticipant(roomName, identity);
+  } catch {
+    return false; // Not connected right now.
+  }
+  const mic = info.tracks.find((t) => t.source === TrackSource.MICROPHONE && !t.muted);
+  if (!mic) return false;
+  await client.mutePublishedTrack(roomName, identity, mic.sid, true);
+  return true;
+}
+
+/** Disconnect someone from the room (no-op if they aren't connected). */
+export async function removeFromRoom(roomName: string, identity: string) {
+  try {
+    await roomService().removeParticipant(roomName, identity);
+  } catch {
+    // Already gone.
+  }
+}
+
+/** Send a JSON message to everyone in the room, from the server (so it can't be forged). */
+export async function broadcast(roomName: string, topic: string, payload: unknown) {
+  const data = new TextEncoder().encode(JSON.stringify(payload));
+  await roomService().sendData(roomName, data, DataPacket_Kind.RELIABLE, { topic });
+}
+
+export async function deleteRoom(roomName: string) {
+  const client = roomService();
   try {
     await client.deleteRoom(roomName);
   } catch {

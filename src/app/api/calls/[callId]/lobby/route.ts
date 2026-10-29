@@ -19,6 +19,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ callId:
       id: true,
       status: true,
       consentedAt: true,
+      livekitIdentity: true,
       user: { select: { name: true, email: true, image: true } },
     },
   });
@@ -30,6 +31,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ callId:
       guests: guests.map((g) => ({
         id: g.id,
         status: g.status,
+        identity: g.livekitIdentity,
         requestedAt: g.consentedAt,
         name: g.user.name,
         email: g.user.email,

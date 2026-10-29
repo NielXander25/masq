@@ -45,3 +45,46 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .reaction-float { animation-name: reaction-fade; }
 }
+
+/* Show who's talking: a green ring around the speaker's tile. */
+.lk-participant-tile[data-lk-speaking="true"] {
+  box-shadow: inset 0 0 0 3px #4ade80;
+}
+/* Busy calls: the name is what matters, so it spans the tile and stays readable. */
+.call-tile-compact .lk-participant-placeholder {
+  padding-bottom: 1.5rem;
+}
+.call-tile-compact .lk-participant-metadata {
+  left: 0.25rem;
+  right: 0.25rem;
+  bottom: 0.25rem;
+}
+.call-tile-compact .lk-participant-metadata-item {
+  flex: 1 1 auto;
+  max-width: 100%;
+  min-width: 0;
+  align-items: flex-start;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+/* Full names, up to two lines, instead of "David Men…". */
+.call-tile-compact .lk-participant-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* In-call messages pop up in the middle of the screen, then fade. */
+@keyframes chat-pop {
+  0% { opacity: 0; transform: scale(0.92); }
+  6% { opacity: 1; transform: scale(1); }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.chat-pop {
+  animation: chat-pop 5s ease-out forwards;
+}

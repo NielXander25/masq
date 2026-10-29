@@ -3,13 +3,14 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { apiUser, jsonError, parseJson } from "@/lib/api";
 import { findHostedCall } from "@/lib/calls";
+import { muteParticipantMic, removeFromRoom } from "@/lib/livekit";
 import { maxParticipants } from "@/lib/plans";
 
-const bodySchema = z.object({ action: z.enum(["admit", "deny"]) });
+const bodySchema = z.object({ action: z.enum(["admit", "deny", "mute", "remove"]) });
 
 class LimitReached extends Error {}
 
-// Host only: admit or deny a pending guest.
+// Host only: admit or deny a waiting guest; mute or remove a guest in the call.
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ callId: string; participantId: string }> },
@@ -26,9 +27,26 @@ export async function POST(
 
   const participant = await db.participant.findFirst({
     where: { id: participantId, callId, isHost: false },
-    select: { id: true, status: true },
+    select: { id: true, status: true, livekitIdentity: true },
   });
   if (!participant) return jsonError(404, "Not found");
+
+  if (parsed.data.action === "mute" || parsed.data.action === "remove") {
+    if (participant.status !== "ADMITTED") return jsonError(409, "This guest isn't in the call");
+    if (parsed.data.action === "mute") {
+      const muted = await muteParticipantMic(call.roomName, participant.livekitIdentity);
+      if (!muted) return jsonError(409, "Their microphone is already off");
+      return NextResponse.json({ status: "ADMITTED", muted: true });
+    }
+    // Removed guests can't rejoin on their own: DENIED blocks new tokens and rejoining.
+    await db.participant.update({
+      where: { id: participant.id },
+      data: { status: "DENIED", leftAt: new Date() },
+    });
+    await removeFromRoom(call.roomName, participant.livekitIdentity);
+    return NextResponse.json({ status: "DENIED" });
+  }
+
   if (participant.status !== "PENDING") return jsonError(409, "This guest is no longer waiting");
 
   if (parsed.data.action === "deny") {

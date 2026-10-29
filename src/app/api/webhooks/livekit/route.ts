@@ -82,6 +82,8 @@ async function handle(event: WebhookEvent) {
             where: { callId: call.id, joinedAt: { not: null }, leftAt: null },
             data: { leftAt: now },
           }),
+          // Chat only lasts as long as the call.
+          db.callMessage.deleteMany({ where: { callId: call.id } }),
         ]);
       }
       await maybeTranscribe(call.id);

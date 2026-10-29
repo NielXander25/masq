@@ -29,6 +29,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ callId
       where: { callId, status: "PENDING" },
       data: { status: "DENIED" },
     }),
+    // Chat only lasts as long as the call.
+    db.callMessage.deleteMany({ where: { callId } }),
   ]);
 
   // Closing the room disconnects everyone still connected (and stops recording).

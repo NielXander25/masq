@@ -1,11 +1,16 @@
 "use client";
 
+import { useRemoteParticipants } from "@livekit/components-react";
+import { Track } from "livekit-client";
 import { useCallback, useEffect, useState } from "react";
+import { MicIcon, MicOffIcon } from "@/components/ui/icons";
 import { Avatar } from "@/components/ui/primitives";
 
 export type LobbyGuest = {
   id: string;
   status: "PENDING" | "ADMITTED";
+  /** Their LiveKit identity, to match them to who's connected. */
+  identity: string;
   name: string | null;
   email: string;
   image: string | null;
@@ -38,7 +43,7 @@ export function useLobby(callId: string, enabled: boolean) {
   }, [load, enabled]);
 
   const decide = useCallback(
-    async (id: string, action: "admit" | "deny") => {
+    async (id: string, action: "admit" | "deny" | "mute" | "remove") => {
       setBusy(id);
       setError(null);
       try {
@@ -152,24 +157,82 @@ export function LobbyPanel({ lobby }: { lobby: Lobby }) {
           </ul>
         )}
       </section>
-      <section>
-        <h3 className="text-sm font-medium text-neutral-300">In the call</h3>
-        {lobby.inCall.length === 0 ? (
-          <p className="mt-2 text-sm text-neutral-500">No guests yet.</p>
-        ) : (
-          <ul className="mt-2 space-y-2">
-            {lobby.inCall.map((g) => (
-              <li key={g.id} className="flex items-center gap-3 rounded-2xl bg-neutral-950 p-3">
-                <Avatar name={g.name ?? g.email} image={g.image} />
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">{g.name ?? g.email}</div>
-                  <div className="truncate text-xs text-neutral-400">{g.email}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <InCallList lobby={lobby} />
     </div>
+  );
+}
+
+/** Guests in the call, with host controls: mute their mic or remove them. */
+function InCallList({ lobby }: { lobby: Lobby }) {
+  const remotes = useRemoteParticipants();
+  const [confirm, setConfirm] = useState<string | null>(null);
+  return (
+    <section>
+      <h3 className="text-sm font-medium text-neutral-300">In the call</h3>
+      {lobby.inCall.length === 0 ? (
+        <p className="mt-2 text-sm text-neutral-500">No guests yet.</p>
+      ) : (
+        <ul className="mt-2 space-y-2">
+          {lobby.inCall.map((g) => {
+            const live = remotes.find((p) => p.identity === g.identity);
+            const micOn = Boolean(live?.getTrackPublication(Track.Source.Microphone)?.isMuted === false);
+            const name = g.name ?? g.email;
+            return (
+              <li key={g.id} className="rounded-2xl bg-neutral-950 p-3">
+                <div className="flex items-center gap-3">
+                  <Avatar name={name} image={g.image} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{name}</div>
+                    <div className="truncate text-xs text-neutral-400">
+                      {live ? g.email : "Not connected right now"}
+                    </div>
+                  </div>
+                  <button
+                    disabled={!micOn || lobby.busy === g.id}
+                    onClick={() => lobby.decide(g.id, "mute")}
+                    aria-label={micOn ? `Mute ${name}` : `${name} is muted`}
+                    title={micOn ? "Mute" : "Muted"}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-800 disabled:text-red-400 disabled:opacity-70"
+                  >
+                    {micOn ? <MicIcon className="h-4 w-4" /> : <MicOffIcon className="h-4 w-4" />}
+                  </button>
+                  <button
+                    disabled={lobby.busy === g.id}
+                    onClick={() => setConfirm(confirm === g.id ? null : g.id)}
+                    className="rounded-full bg-neutral-800 px-3 py-1.5 text-sm text-red-300 disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+                {confirm === g.id && (
+                  <div className="mt-3 rounded-xl bg-red-500/10 p-3">
+                    <p className="text-sm text-red-200">
+                      Remove {name} from the call? They won&apos;t be able to rejoin this call.
+                    </p>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={() => setConfirm(null)}
+                        className="flex-1 rounded-full bg-neutral-800 px-3 py-2 text-sm"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={async () => {
+                          setConfirm(null);
+                          await lobby.decide(g.id, "remove");
+                        }}
+                        className="flex-1 rounded-full bg-red-600 px-3 py-2 text-sm font-semibold text-white"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
