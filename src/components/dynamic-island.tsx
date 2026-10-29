@@ -62,13 +62,7 @@ export function DynamicIsland({
           <div className="island-content px-4 pb-4 pt-1">
             {waiting && lobby ? (
               <>
-                <div className="flex items-center gap-3">
-                  <Avatar name={waiting.name ?? waiting.email} image={waiting.image} />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-semibold">{waiting.name ?? waiting.email}</div>
-                    <div className="truncate text-xs text-neutral-400">wants to join · {waiting.email}</div>
-                  </div>
-                </div>
+                <RevealName name={waiting.name ?? waiting.email} email={waiting.email} image={waiting.image} />
                 {lobby.error && <p className="mt-2 rounded-lg bg-red-500/15 px-2 py-1 text-sm text-red-300">{lobby.error}</p>}
                 <div className="mt-3 flex gap-2">
                   <button
@@ -104,6 +98,28 @@ export function DynamicIsland({
         )}
       </div>
     </div>
+  );
+}
+
+/** Just the name; tap it to see who exactly (their email). */
+export function RevealName({ name, email, image }: { name: string; email: string; image: string | null }) {
+  const [shown, setShown] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => setShown((v) => !v)}
+      aria-expanded={shown}
+      className="flex w-full items-center gap-3 text-left"
+    >
+      <Avatar name={name} image={image} />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-semibold">{name}</span>
+        {shown && <span className="block truncate text-xs text-neutral-400">{email}</span>}
+      </span>
+      <span className={`text-neutral-500 transition ${shown ? "rotate-180" : ""}`} aria-hidden>
+        ⌄
+      </span>
+    </button>
   );
 }
 

@@ -4,7 +4,7 @@ import { useRemoteParticipants } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import { useCallback, useEffect, useState } from "react";
 import { MicIcon, MicOffIcon } from "@/components/ui/icons";
-import { Avatar } from "@/components/ui/primitives";
+import { RevealName } from "@/components/dynamic-island";
 
 export type LobbyGuest = {
   id: string;
@@ -97,10 +97,8 @@ export function LobbyPanel({ lobby }: { lobby: Lobby }) {
           <ul className="mt-2 space-y-2">
             {lobby.waiting.map((g) => (
               <li key={g.id} className="flex items-center gap-3 rounded-2xl bg-neutral-950 p-3">
-                <Avatar name={g.name ?? g.email} image={g.image} />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{g.name ?? g.email}</div>
-                  <div className="truncate text-xs text-neutral-400">{g.email}</div>
+                  <RevealName name={g.name ?? g.email} email={g.email} image={g.image} />
                 </div>
                 <button
                   disabled={lobby.busy === g.id}
@@ -144,12 +142,8 @@ function InCallList({ lobby }: { lobby: Lobby }) {
             return (
               <li key={g.id} className="rounded-2xl bg-neutral-950 p-3">
                 <div className="flex items-center gap-3">
-                  <Avatar name={name} image={g.image} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{name}</div>
-                    <div className="truncate text-xs text-neutral-400">
-                      {live ? g.email : "Not connected right now"}
-                    </div>
+                    <RevealName name={live ? name : `${name} (away)`} email={g.email} image={g.image} />
                   </div>
                   <button
                     disabled={!micOn || lobby.busy === g.id}
