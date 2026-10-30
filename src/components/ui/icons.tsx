@@ -151,3 +151,9 @@ export const ScriptIcon = ({ className }: P) => (
     <path d="M14 3v6h6M8 13h8M8 17h5" />
   </svg>
 );
+
+export const PencilIcon = ({ className }: P) => (
+  <svg {...base(className)}>
+    <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+  </svg>
+);
