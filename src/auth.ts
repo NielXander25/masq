@@ -11,8 +11,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google],
   pages: { signIn: "/signin", error: "/signin" },
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, profile }) {
       if (!user.email) return false;
+      // Guests are identified by their Google email, so it must be verified.
+      if (profile && profile.email_verified === false) return false;
       const existing = await db.user.findUnique({
         where: { email: user.email.toLowerCase() },
         select: { bannedAt: true },

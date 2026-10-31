@@ -5,6 +5,7 @@ import { apiUser, jsonError, parseJson } from "@/lib/api";
 import { findHostedCall } from "@/lib/calls";
 import { muteParticipantMic, removeFromRoom } from "@/lib/livekit";
 import { maxParticipants } from "@/lib/plans";
+import { allow, TOO_MANY } from "@/lib/rate-limit";
 
 const bodySchema = z.object({ action: z.enum(["admit", "deny", "mute", "remove"]) });
 
@@ -17,6 +18,7 @@ export async function POST(
 ) {
   const user = await apiUser();
   if (!user) return jsonError(401, "Unauthorized");
+  if (!allow(`decide:${user.id}`, 60, 60_000)) return jsonError(429, TOO_MANY);
   const parsed = await parseJson(req, bodySchema);
   if (!parsed.success) return jsonError(400, "Invalid request");
   const { callId, participantId } = await params;

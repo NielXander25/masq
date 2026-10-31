@@ -4,12 +4,14 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { apiUser, jsonError, parseJson } from "@/lib/api";
 import { createToken, livekitConfigured, livekitServerUrl } from "@/lib/livekit";
+import { allow, TOO_MANY } from "@/lib/rate-limit";
 
 const bodySchema = z.object({ callId: z.string().min(1).max(64) });
 
 export async function POST(req: Request) {
   const user = await apiUser();
   if (!user) return jsonError(401, "Unauthorized");
+  if (!allow(`token:${user.id}`, 20, 60_000)) return jsonError(429, TOO_MANY);
   const parsed = await parseJson(req, bodySchema);
   if (!parsed.success) return jsonError(400, "Invalid request");
   if (!livekitConfigured()) return jsonError(503, "Calls are not available yet");

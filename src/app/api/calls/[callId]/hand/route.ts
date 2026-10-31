@@ -3,6 +3,7 @@ import { z } from "zod";
 import { apiUser, jsonError, parseJson } from "@/lib/api";
 import { db } from "@/lib/db";
 import { setHand } from "@/lib/livekit";
+import { allow, TOO_MANY } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   raised: z.boolean(),
@@ -14,6 +15,7 @@ const bodySchema = z.object({
 export async function POST(req: Request, { params }: { params: Promise<{ callId: string }> }) {
   const user = await apiUser();
   if (!user) return jsonError(401, "Unauthorized");
+  if (!allow(`hand:${user.id}`, 10, 10_000)) return jsonError(429, TOO_MANY);
   const parsed = await parseJson(req, bodySchema);
   if (!parsed.success) return jsonError(400, "Invalid request");
   const { callId } = await params;

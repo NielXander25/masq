@@ -26,6 +26,12 @@ export async function requestJoin(input: unknown): Promise<RequestJoinResult> {
   if (call.status === "ENDED") return { ok: false, error: "This call has ended" };
   if (call.hostId === user.id) return { ok: false, error: "You are the host of this call" };
 
+  // Rate limit: at most 20 join requests across calls in 10 minutes.
+  const recent = await db.participant.count({
+    where: { userId: user.id, isHost: false, consentedAt: { gte: new Date(Date.now() - 600_000) } },
+  });
+  if (recent >= 20) return { ok: false, error: "Too many join requests. Please wait a few minutes." };
+
   const existing = await db.participant.findUnique({
     where: { callId_userId: { callId, userId: user.id } },
     select: { id: true, status: true },

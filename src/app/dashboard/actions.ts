@@ -64,6 +64,15 @@ export async function createCall(
     return { error: "The voice changer is a PRO feature." };
   }
 
+  // Rate limit, counted in the database so it holds across server instances.
+  const [lastHour, lastDay] = await Promise.all([
+    db.call.count({ where: { hostId: user.id, createdAt: { gte: new Date(Date.now() - 3600_000) } } }),
+    db.call.count({ where: { hostId: user.id, createdAt: { gte: new Date(Date.now() - 86400_000) } } }),
+  ]);
+  if (lastHour >= 30 || lastDay >= 150) {
+    return { error: "You've created a lot of calls recently. Please try again later." };
+  }
+
   const call = await db.call.create({
     data: {
       // Short ID so invite links stay short: /c/k7m2xq9p

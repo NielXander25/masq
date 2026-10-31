@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
+import { deleteRoom, livekitConfigured, removeFromRoom } from "@/lib/livekit";
 import { r2Configured, r2SignedUrl } from "@/lib/r2";
 import { readSegments } from "@/lib/transcribe/read";
 import { requireAdmin } from "@/lib/session";
@@ -28,11 +29,40 @@ export async function setBanned(input: unknown) {
   const admin = await requireAdmin();
   const { userId, banned } = z.object({ userId: id, banned: z.boolean() }).parse(input);
   if (userId === admin.id) throw new Error("You can't ban yourself");
-  // Sessions are kept so the user's next visit can show the suspended page;
-  // middleware then signs them out, and APIs refuse banned users immediately.
   await db.user.update({ where: { id: userId }, data: { bannedAt: banned ? new Date() : null } });
+  // A ban takes effect at once: sign them out everywhere and pull them out of
+  // live calls (their call tokens are revoked too). Sign-in then shows the
+  // suspended page.
+  if (banned) await cutOff(userId);
   await audit(admin.id, banned ? "BAN_USER" : "UNBAN_USER", "User", userId);
   revalidatePath("/admin", "layout");
+}
+
+async function cutOff(userId: string) {
+  await db.session.deleteMany({ where: { userId } });
+  const live = await db.participant.findMany({
+    where: { userId, status: "ADMITTED", call: { status: { not: "ENDED" } } },
+    select: { id: true, isHost: true, livekitIdentity: true, call: { select: { id: true, roomName: true } } },
+  });
+  const now = new Date();
+  for (const p of live) {
+    if (p.isHost) {
+      // Their own calls end for everyone.
+      await db.$transaction([
+        db.call.update({ where: { id: p.call.id }, data: { status: "ENDED", endedAt: now } }),
+        db.participant.updateMany({ where: { callId: p.call.id, status: "PENDING" }, data: { status: "DENIED" } }),
+        db.participant.updateMany({
+          where: { callId: p.call.id, isHost: false, status: "ADMITTED" },
+          data: { status: "LEFT", leftAt: now },
+        }),
+        db.callMessage.deleteMany({ where: { callId: p.call.id } }),
+      ]);
+      if (livekitConfigured()) await deleteRoom(p.call.roomName);
+    } else {
+      await db.participant.update({ where: { id: p.id }, data: { status: "DENIED", leftAt: now } });
+      if (livekitConfigured()) await removeFromRoom(p.call.roomName, p.livekitIdentity);
+    }
+  }
 }
 
 export async function setPlan(input: unknown) {
