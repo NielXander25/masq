@@ -18,7 +18,7 @@ import {
   type TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
 import { ConnectionState, DisconnectReason, Track } from "livekit-client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChatPanel, ChatPopups, useChat } from "@/components/chat";
 import { DynamicIsland } from "@/components/dynamic-island";
 import { LobbyPanel, useLobby, type Lobby } from "@/components/lobby-panel";
@@ -26,6 +26,7 @@ import { CameraRequiredGuard, MicButton, PresetSwitcher } from "@/components/mic
 import { PreJoin } from "@/components/prejoin";
 import { ReactionOverlay, ReactionTray, useReactions } from "@/components/reactions";
 import { RejoinButton } from "@/components/rejoin-button";
+import { SimpleView } from "@/components/simple-view";
 import { EmojiIcon, EndedIcon, StatusCard } from "@/components/status-card";
 import { ScriptEditor, ScriptOverlay, useScript } from "@/components/script-prompter";
 import {
@@ -256,6 +257,7 @@ function InCall({
   const reactions = useReactions();
   const chat = useChat(callId, sheet === "chat");
   const script = useScript();
+  const simple = useSimpleView({ busy: sheet !== null || trayOpen || script.showing });
   useEffect(() => setCanScreenShare(Boolean(navigator.mediaDevices?.getDisplayMedia)), []);
 
   const subtitle = isHost
@@ -273,7 +275,20 @@ function InCall({
       <ChatPopups chat={chat} onOpen={() => setSheet("chat")} />
       <ScriptOverlay script={script} onEdit={() => setSheet("script")} />
 
+      {simple.on && (
+        <SimpleView
+          title={hostDisplayName(alias, title)}
+          recording={recording}
+          disguise={voiceOn}
+          unread={chat.unread}
+          onReact={reactions.react}
+          onMessages={() => setSheet("chat")}
+          onHangUp={() => (isHost ? setSheet("end") : room.disconnect())}
+          onExit={simple.exit}
+        />
+      )}
       <DynamicIsland
+        alertsOnly={simple.on}
         alias={hostDisplayName(alias, title)}
         subtitle={subtitle}
         running={state === ConnectionState.Connected}
@@ -351,6 +366,19 @@ function InCall({
               <PresetSwitcher />
             </div>
           )}
+          <button
+            onClick={() => {
+              setSheet(null);
+              simple.enter();
+            }}
+            className="flex w-full items-center gap-3 rounded-2xl bg-white/10 px-4 py-3.5 text-left"
+          >
+            <span className="flex h-5 w-5 items-center justify-center text-lg">◉</span>
+            <span className="flex-1">
+              <span className="block font-medium">Simple view</span>
+              <span className="block text-xs text-neutral-400">Big buttons and who&apos;s talking</span>
+            </span>
+          </button>
           <button
             onClick={() => setSheet("script")}
             className="flex w-full items-center gap-3 rounded-2xl bg-white/10 px-4 py-3.5 text-left"
@@ -570,3 +598,62 @@ function Message({ title, children, spinner }: { title: string; children?: React
 }
 
 export type { Lobby };
+
+const IDLE_MS = 30_000;
+
+/**
+ * Simple view comes on by itself on phones when the call is quiet on screen:
+ * nobody's camera or screen is on and you haven't touched anything for a
+ * while. Turning it off is one tap, and it then stays off for this call.
+ */
+function useSimpleView({ busy }: { busy: boolean }) {
+  const [on, setOn] = useState(false);
+  const [auto, setAuto] = useState(false);
+  const [optedOut, setOptedOut] = useState(false);
+  const lastActive = useRef(Date.now());
+  const video = useTracks([Track.Source.Camera, Track.Source.ScreenShare], { onlySubscribed: false }).some(
+    (t) => isTrackReference(t) && !t.publication.isMuted,
+  );
+
+  useEffect(() => {
+    const touch = () => {
+      lastActive.current = Date.now();
+    };
+    window.addEventListener("pointerdown", touch);
+    window.addEventListener("keydown", touch);
+    return () => {
+      window.removeEventListener("pointerdown", touch);
+      window.removeEventListener("keydown", touch);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (on || optedOut || video || busy) return;
+    const timer = setInterval(() => {
+      const phone = window.matchMedia("(max-width: 767px)").matches;
+      if (phone && Date.now() - lastActive.current > IDLE_MS) {
+        setOn(true);
+        setAuto(true);
+      }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [on, optedOut, video, busy]);
+
+  // Someone turned a camera or screen on: don't hide it behind the simple view.
+  useEffect(() => {
+    if (on && auto && video) setOn(false);
+  }, [on, auto, video]);
+
+  return {
+    on,
+    enter: () => {
+      setOn(true);
+      setAuto(false);
+    },
+    exit: () => {
+      setOn(false);
+      setOptedOut(true);
+      lastActive.current = Date.now();
+    },
+  };
+}

@@ -61,7 +61,7 @@ export function useReactions() {
 /** Emojis floating up from the bottom-left of the stage, Meet style. */
 export function ReactionOverlay({ items }: { items: Floating[] }) {
   return (
-    <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden" aria-live="polite">
+    <div className="pointer-events-none absolute inset-0 z-[46] overflow-hidden" aria-live="polite">
       {items.map((r) => (
         <div
           key={r.id}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useConnectionState, useLocalParticipant, useRoomContext, useTrackVolume } from "@livekit/components-react";
-import { ConnectionState, Track, type LocalAudioTrack, type LocalTrackPublication } from "livekit-client";
+import { ConnectionState, Track, type LocalAudioTrack, type LocalParticipant, type LocalTrackPublication } from "livekit-client";
 import { useEffect, useRef, useState } from "react";
 import { MicIcon, MicOffIcon } from "@/components/ui/icons";
 import { PRESET_LABELS, VOICE_PRESETS, isVoicePreset } from "@/lib/voice/presets";
@@ -14,6 +14,24 @@ import { useMicStore } from "@/lib/voice/store";
  */
 export function MicButton({ disguise, callId }: { disguise: boolean; callId: string }) {
   return disguise ? <DisguisedMicButton callId={callId} /> : <NativeMicButton />;
+}
+
+/**
+ * Mute or unmute. A disguised host's mic is a track we published ourselves, so
+ * it's muted through its publication; LiveKit never opens the raw microphone.
+ */
+export async function toggleMic(participant: LocalParticipant, disguise: boolean) {
+  if (!disguise) {
+    await participant.setMicrophoneEnabled(!participant.isMicrophoneEnabled);
+    return;
+  }
+  // A tap: also wake the audio engine (and mic) if the phone paused them.
+  const proc = useMicStore.getState().processor;
+  void (proc?.recover ?? proc?.resume)?.call(proc);
+  const p = participant.getTrackPublication(Track.Source.Microphone);
+  if (!p) return;
+  if (p.isMuted) await p.unmute();
+  else await p.mute();
 }
 
 /** Level (0..1) of the audio actually being sent: the disguised voice, if on. */
@@ -69,8 +87,11 @@ function DisguisedMicButton({ callId }: { callId: string }) {
   const pub = useRef<LocalTrackPublication | null>(null);
   const publishing = useRef(false);
   const [published, setPublished] = useState(false);
-  const [muted, setMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Read the state from the call, so muting from Simple view (or by the host
+  // remotely) shows here too.
+  const { isMicrophoneEnabled } = useLocalParticipant();
+  const muted = published && !isMicrophoneEnabled;
 
   useEffect(() => {
     if (state !== ConnectionState.Connected || !track || publishing.current) return;
@@ -93,14 +114,7 @@ function DisguisedMicButton({ callId }: { callId: string }) {
   }, [room, state, track]);
 
   async function toggle() {
-    // A tap: also wake the audio engine (and mic) if the phone paused them.
-    const proc = useMicStore.getState().processor;
-    void (proc?.recover ?? proc?.resume)?.call(proc);
-    const p = pub.current;
-    if (!p) return;
-    if (p.isMuted) await p.unmute();
-    else await p.mute();
-    setMuted(p.isMuted);
+    if (pub.current) await toggleMic(room.localParticipant, true);
   }
 
   if (error) return <span className="text-sm text-red-400">Microphone not sent: {error}</span>;

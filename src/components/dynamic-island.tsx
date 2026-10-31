@@ -19,6 +19,7 @@ export function DynamicIsland({
   reconnecting,
   realVoice,
   lobby,
+  alertsOnly = false,
 }: {
   alias: string;
   subtitle: string;
@@ -28,15 +29,18 @@ export function DynamicIsland({
   realVoice: boolean;
   /** Host only: guests waiting to be let in. */
   lobby?: Lobby;
+  /** Simple view: only show up for things that need attention. */
+  alertsOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const speaking = useSpeakingParticipants().filter((p) => !p.isLocal);
   const speaker = speaking[0] ? baseName(speaking[0].name || "Someone") : null;
   const waiting = lobby?.waiting[0];
   const expanded = Boolean(waiting) || reconnecting || open;
+  if (alertsOnly && !waiting && !reconnecting) return null;
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-[max(0.5rem,env(safe-area-inset-top))] z-40 flex justify-center px-3">
+    <div className={`pointer-events-none absolute inset-x-0 top-[max(0.5rem,env(safe-area-inset-top))] flex justify-center px-3 ${alertsOnly ? "z-[47]" : "z-40"}`}>
       <div
         className={`island pointer-events-auto overflow-hidden bg-black text-white shadow-[0_8px_30px_rgba(0,0,0,0.6)] ring-1 ring-white/10 ${
           expanded ? "w-[min(94vw,380px)] rounded-[28px]" : "w-[min(78vw,250px)] rounded-full"

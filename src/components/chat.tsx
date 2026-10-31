@@ -97,7 +97,7 @@ export type Chat = ReturnType<typeof useChat>;
 export function ChatPopups({ chat, onOpen }: { chat: Chat; onOpen: () => void }) {
   if (chat.popups.length === 0) return null;
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-2 px-6">
+    <div className="pointer-events-none absolute inset-x-0 top-1/2 z-[46] flex -translate-y-1/2 flex-col items-center gap-2 px-6">
       {chat.popups.map((m) => (
         <button
           key={m.id}
