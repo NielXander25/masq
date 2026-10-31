@@ -20,6 +20,7 @@ export function DynamicIsland({
   realVoice,
   lobby,
   alertsOnly = false,
+  handCount = 0,
 }: {
   alias: string;
   subtitle: string;
@@ -31,6 +32,8 @@ export function DynamicIsland({
   lobby?: Lobby;
   /** Simple view: only show up for things that need attention. */
   alertsOnly?: boolean;
+  /** How many hands are up. */
+  handCount?: number;
 }) {
   const [open, setOpen] = useState(false);
   const speaking = useSpeakingParticipants().filter((p) => !p.isLocal);
@@ -57,6 +60,11 @@ export function DynamicIsland({
           <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
             {reconnecting ? "Reconnecting…" : (speaker ?? alias)}
           </span>
+          {handCount > 0 && (
+            <span className="shrink-0 rounded-full bg-[#ffd60a] px-1.5 text-[11px] font-bold text-black" aria-label={`${handCount} hands raised`}>
+              ✋{handCount}
+            </span>
+          )}
           {recording && <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-red-500" aria-label="Recording" />}
           {realVoice && <span className="h-2 w-2 shrink-0 rounded-full bg-amber-400" aria-label="Real voice" />}
           <CallTimer running={running} />

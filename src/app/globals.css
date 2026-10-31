@@ -296,3 +296,18 @@ body {
 .simple-view {
   animation: fade-in 0.3s ease-out;
 }
+.hand-pop {
+  animation: hand-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+@keyframes hand-pop {
+  from { transform: scale(0.3) rotate(-25deg); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+/* Full-screen tile: show the raised hand below the island, where it's visible. */
+.call-tile-full .hand-pop {
+  top: calc(4.5rem + env(safe-area-inset-top));
+  left: 0.75rem;
+  height: 3rem;
+  width: 3rem;
+  font-size: 1.5rem;
+}

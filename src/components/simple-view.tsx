@@ -5,7 +5,8 @@ import type { Participant } from "livekit-client";
 import { useEffect, useState } from "react";
 import { toggleMic } from "@/components/mic-controls";
 import { ReactionTray, type REACTIONS } from "@/components/reactions";
-import { ChatIcon, CloseIcon, MicIcon, MicOffIcon, PhoneOffIcon, SmileIcon } from "@/components/ui/icons";
+import type { Hands } from "@/components/hands";
+import { ChatIcon, CloseIcon, HandIcon, MicIcon, MicOffIcon, PhoneOffIcon, SmileIcon } from "@/components/ui/icons";
 import { Avatar } from "@/components/ui/primitives";
 import { baseName } from "@/lib/alias";
 
@@ -19,6 +20,7 @@ export function SimpleView({
   recording,
   disguise,
   unread,
+  hands,
   onReact,
   onMessages,
   onHangUp,
@@ -28,6 +30,7 @@ export function SimpleView({
   recording: boolean;
   disguise: boolean;
   unread: number;
+  hands: Hands;
   onReact: (emoji: (typeof REACTIONS)[number]) => void;
   onMessages: () => void;
   onHangUp: () => void;
@@ -94,14 +97,27 @@ export function SimpleView({
           {muted ? <MicOffIcon className="h-8 w-8" /> : <MicIcon className="h-8 w-8" />}
           {muted ? "Unmute" : "Mute"}
         </button>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
+          <button
+            type="button"
+            onClick={hands.toggle}
+            disabled={hands.busy}
+            aria-pressed={hands.mine}
+            aria-label={hands.mine ? "Lower hand" : "Raise hand"}
+            className={`morph flex h-28 flex-col items-center justify-center gap-1.5 text-[15px] font-semibold ${
+              hands.mine ? "rounded-[24px] bg-[#ffd60a] text-black" : "rounded-[48px] bg-white/[0.12]"
+            }`}
+          >
+            <HandIcon className="h-7 w-7" />
+            {hands.mine ? "Lower" : "Raise"}
+          </button>
           <button
             type="button"
             onClick={() => setTray((t) => !t)}
             aria-pressed={tray}
             aria-label={tray ? "Close reactions" : "Send a reaction"}
-            className={`morph flex h-28 flex-col items-center justify-center gap-1.5 text-[16px] font-semibold ${
-              tray ? "rounded-[24px] bg-[#f2e3c4] text-[#3d2c0b]" : "rounded-[56px] bg-white/[0.12]"
+            className={`morph flex h-28 flex-col items-center justify-center gap-1.5 text-[15px] font-semibold ${
+              tray ? "rounded-[24px] bg-[#f2e3c4] text-[#3d2c0b]" : "rounded-[48px] bg-white/[0.12]"
             }`}
           >
             <SmileIcon className="h-7 w-7" />
@@ -111,12 +127,12 @@ export function SimpleView({
             type="button"
             onClick={onMessages}
             aria-label="Messages"
-            className="morph relative flex h-28 flex-col items-center justify-center gap-1.5 rounded-[56px] bg-white/[0.12] text-[16px] font-semibold"
+            className="morph relative flex h-28 flex-col items-center justify-center gap-1.5 rounded-[48px] bg-white/[0.12] text-[15px] font-semibold"
           >
             <ChatIcon className="h-7 w-7" />
             Messages
             {unread > 0 && (
-              <span className="absolute right-6 top-5 flex h-6 min-w-6 items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-xs font-bold">
+              <span className="absolute right-3 top-3 flex h-6 min-w-6 items-center justify-center rounded-full bg-[#ff3b30] px-1.5 text-xs font-bold">
                 {unread}
               </span>
             )}

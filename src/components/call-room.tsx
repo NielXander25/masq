@@ -21,6 +21,7 @@ import { ConnectionState, DisconnectReason, Track } from "livekit-client";
 import { useEffect, useRef, useState } from "react";
 import { ChatPanel, ChatPopups, useChat } from "@/components/chat";
 import { DynamicIsland } from "@/components/dynamic-island";
+import { HandBadge, RaisedHandsList, useHands } from "@/components/hands";
 import { LobbyPanel, useLobby, type Lobby } from "@/components/lobby-panel";
 import { CameraRequiredGuard, MicButton, PresetSwitcher } from "@/components/mic-controls";
 import { PreJoin } from "@/components/prejoin";
@@ -31,6 +32,7 @@ import { EmojiIcon, EndedIcon, StatusCard } from "@/components/status-card";
 import { ScriptEditor, ScriptOverlay, useScript } from "@/components/script-prompter";
 import {
   ChatIcon,
+  HandIcon,
   CopyIcon,
   LinkIcon,
   MoreIcon,
@@ -257,6 +259,7 @@ function InCall({
   const reactions = useReactions();
   const chat = useChat(callId, sheet === "chat");
   const script = useScript();
+  const hands = useHands(callId);
   const simple = useSimpleView({ busy: sheet !== null || trayOpen || script.showing });
   useEffect(() => setCanScreenShare(Boolean(navigator.mediaDevices?.getDisplayMedia)), []);
 
@@ -281,6 +284,7 @@ function InCall({
           recording={recording}
           disguise={voiceOn}
           unread={chat.unread}
+          hands={hands}
           onReact={reactions.react}
           onMessages={() => setSheet("chat")}
           onHangUp={() => (isHost ? setSheet("end") : room.disconnect())}
@@ -295,6 +299,7 @@ function InCall({
         recording={recording}
         reconnecting={state === ConnectionState.Reconnecting}
         realVoice={isHost && !voiceOn}
+        handCount={hands.hands.length}
         lobby={isHost ? lobby : undefined}
       />
       {cameraRequired && (
@@ -306,7 +311,7 @@ function InCall({
       {/* Floating glass dock */}
       <div className="absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex flex-col items-center gap-2.5 px-2">
         {trayOpen && <ReactionTray onPick={reactions.react} />}
-        <div className="glass flex items-center gap-2 rounded-[34px] p-2 min-[400px]:gap-2.5 sm:gap-3 sm:p-2.5">
+        <div className="glass flex items-center gap-1.5 rounded-[34px] p-2 min-[400px]:gap-2 sm:gap-3 sm:p-2.5">
           <MicButton disguise={voiceOn} callId={callId} />
           {!isHost && !cameraRequired && (
             <RoundButton
@@ -325,6 +330,15 @@ function InCall({
           >
             <SmileIcon />
           </RoundButton>
+          <RoundButton
+            label={hands.mine ? "Lower hand" : "Raise hand"}
+            pressed={hands.mine}
+            tone={hands.mine ? "light" : "default"}
+            onClick={hands.toggle}
+            disabled={hands.busy}
+          >
+            <HandIcon />
+          </RoundButton>
           <RoundButton label="Messages" onClick={() => setSheet("chat")} badge={chat.unread}>
             <ChatIcon />
           </RoundButton>
@@ -340,7 +354,7 @@ function InCall({
             onClick={() => (isHost ? setSheet("end") : room.disconnect())}
             aria-label={isHost ? "Hang up" : "Leave call"}
             title={isHost ? "Hang up" : "Leave call"}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#ff3b30] text-white shadow-[0_6px_20px_rgba(255,59,48,0.45)] transition active:scale-95 sm:h-14 sm:w-14"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ff3b30] text-white shadow-[0_6px_20px_rgba(255,59,48,0.45)] transition active:scale-95 min-[400px]:h-12 min-[400px]:w-12 sm:h-14 sm:w-14"
           >
             <PhoneOffIcon />
           </button>
@@ -352,6 +366,7 @@ function InCall({
       </Sheet>
 
       <Sheet open={sheet === "people"} onClose={() => setSheet(null)} title="People">
+        <RaisedHandsList hands={hands} canLower={isHost} />
         {inviteUrl && <InviteLink url={inviteUrl} alias={alias} />}
         <div className="mt-5">
           <LobbyPanel lobby={lobby} />
@@ -526,6 +541,7 @@ function CallTile({
       className={`!rounded-none bg-neutral-900 ${compact ? "call-tile-compact" : ""} ${className}`}
     >
       {isTrackReference(trackRef) && <VideoTrack trackRef={trackRef} className="!object-cover" />}
+      {isCamera && <HandBadge participant={trackRef.participant} />}
       {!hasVideo && (
         <div className="lk-participant-placeholder !bg-neutral-900">
           <Avatar

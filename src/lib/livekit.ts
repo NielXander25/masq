@@ -81,13 +81,29 @@ export async function muteParticipantMic(roomName: string, identity: string) {
   return true;
 }
 
-/** Disconnect someone from the room (no-op if they aren't connected). */
+/**
+ * Disconnect someone from the room (no-op if they aren't connected), and
+ * invalidate any token they already hold so they can't reconnect with it.
+ */
 export async function removeFromRoom(roomName: string, identity: string) {
   try {
-    await roomService().removeParticipant(roomName, identity);
+    await roomService().removeParticipant(roomName, identity, {
+      revokeTokenTs: BigInt(Math.floor(Date.now() / 1000)),
+    });
   } catch {
     // Already gone.
   }
+}
+
+/**
+ * Raise or lower a hand. It lives in the participant's attributes, which only
+ * the server can change, so nobody can raise or lower someone else's hand.
+ * The value is when it was raised, which gives the queue order.
+ */
+export async function setHand(roomName: string, identity: string, raised: boolean) {
+  await roomService().updateParticipant(roomName, identity, {
+    attributes: { hand: raised ? String(Date.now()) : "" },
+  });
 }
 
 /** Send a JSON message to everyone in the room, from the server (so it can't be forged). */

@@ -233,7 +233,7 @@ function MuteToggle({ muted, disabled, onToggle }: { muted: boolean; disabled: b
         aria-pressed={muted}
         aria-label={muted ? "Unmute microphone" : "Mute microphone"}
         title={muted ? "Unmute" : "Mute"}
-        className={`flex h-12 w-12 items-center justify-center rounded-full backdrop-blur-xl transition active:scale-95 disabled:opacity-40 sm:h-14 sm:w-14 ${
+        className={`flex h-11 w-11 items-center justify-center rounded-full backdrop-blur-xl transition active:scale-95 disabled:opacity-40 min-[400px]:h-12 min-[400px]:w-12 sm:h-14 sm:w-14 ${
           muted ? "bg-white text-black" : "bg-white/15 text-white hover:bg-white/25"
         }`}
       >
