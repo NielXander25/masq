@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { CloseIcon } from "./icons";
 
 /** Round icon button, as in Meet / WhatsApp call controls. */
@@ -69,8 +70,10 @@ export function Sheet({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
-  return (
+  // Rendered at the end of <body>: a frosted-glass or transformed parent would
+  // otherwise trap this full-screen overlay inside itself.
+  if (!open || typeof document === "undefined") return null;
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={title}>
       <button aria-label="Close" className="sheet-backdrop absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
       <div className="sheet-panel relative max-h-[92dvh] w-full overflow-y-auto rounded-t-[32px] border-t border-white/10 bg-neutral-900/80 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-white shadow-[0_-10px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl backdrop-saturate-150 sm:max-w-md sm:rounded-[32px] sm:border">
@@ -85,7 +88,8 @@ export function Sheet({
         )}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

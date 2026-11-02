@@ -164,3 +164,11 @@ export const HandIcon = ({ className }: P) => (
     <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
   </svg>
 );
+
+/** Safari's Share button: a box with an arrow pointing up. */
+export const IosShareIcon = ({ className }: P) => (
+  <svg {...base(className)}>
+    <path d="M12 3v12M8 7l4-4 4 4" />
+    <path d="M8 11H6a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-2" />
+  </svg>
+);

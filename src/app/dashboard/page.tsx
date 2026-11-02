@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SignOutButton } from "@/components/auth-buttons";
 import { AccountMenu, JoinWithLink, LocalTime, ShareLinkButton } from "@/components/dashboard-bits";
+import { InstallAppCard } from "@/components/install-app";
 import { Logo } from "@/components/logo";
 import { ModeSwitch } from "@/components/mode-switch";
 import { NewCallButton } from "@/components/new-call-form";
@@ -109,6 +110,8 @@ export default async function DashboardPage() {
       </header>
 
       <h1 className="mt-5 px-1 text-[34px] font-bold leading-tight tracking-tight">Calls</h1>
+
+      <InstallAppCard />
 
       <div className="mt-4 flex gap-2">
         <NewCallButton canUseVoiceChanger={canUse("VOICE_CHANGER", user)} canRecord={recordingConfigured()} />

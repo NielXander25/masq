@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { env } from "@/env";
 import "./globals.css";
+import { PwaSetup } from "@/components/install-app";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,6 +17,11 @@ const geistMono = Geist_Mono({
 const description =
   "Hosting calls anonymously, now made easy. Pick any name, disguise your voice, and always know who joins.";
 
+export const viewport: Viewport = {
+  themeColor: "#0b0b0f",
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   // Absolute URLs for link previews (WhatsApp, iMessage, Slack, …).
   metadataBase: new URL(env.APP_URL),
@@ -23,6 +29,8 @@ export const metadata: Metadata = {
   description,
   openGraph: { siteName: "masqq", title: "masqq", description, type: "website" },
   twitter: { card: "summary_large_image", title: "masqq", description },
+  // Installed on iPhone: full screen, with the status bar over our dark background.
+  appleWebApp: { capable: true, title: "masqq", statusBarStyle: "black-translucent" },
 };
 
 export default function RootLayout({
@@ -36,6 +44,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <PwaSetup />
       </body>
     </html>
   );

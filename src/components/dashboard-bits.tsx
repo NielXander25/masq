@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { InstallAppButton } from "@/components/install-app";
 import { ShareIcon } from "@/components/ui/icons";
 import { Avatar, Sheet } from "@/components/ui/primitives";
 
@@ -79,6 +80,7 @@ export function AccountMenu({
           </div>
         </div>
         <div className="mt-5 space-y-2">
+          <InstallAppButton />
           {signOut}
         </div>
       </Sheet>
