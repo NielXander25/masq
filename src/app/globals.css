@@ -1,5 +1,40 @@
 @import "tailwindcss";
 
+/*
+ * Screen-size variants that ignore Chrome's "Desktop site" width. When the
+ * page is zoomed to fit a phone (head-scripts.ts adds <style id="fit-phone">),
+ * the layout viewport is still ~980px wide, so plain media queries would pick
+ * desktop layouts on a phone.
+ */
+@custom-variant sm {
+  @media (width >= 40rem) {
+    &:where(html:not(:has(#fit-phone)) *) {
+      @slot;
+    }
+  }
+}
+@custom-variant md {
+  @media (width >= 48rem) {
+    &:where(html:not(:has(#fit-phone)) *) {
+      @slot;
+    }
+  }
+}
+@custom-variant lg {
+  @media (width >= 64rem) {
+    &:where(html:not(:has(#fit-phone)) *) {
+      @slot;
+    }
+  }
+}
+@custom-variant wide {
+  @media (width >= 400px) {
+    &:where(html:not(:has(#fit-phone)) *) {
+      @slot;
+    }
+  }
+}
+
 :root {
   --background: #0b0b0f;
   --foreground: #ededed;
@@ -163,7 +198,7 @@ body {
   right: 0.75rem;
 }
 @media (min-width: 640px) {
-  .call-tile-full .lk-participant-metadata { bottom: calc(7.5rem + env(safe-area-inset-bottom)); }
+  html:not(:has(#fit-phone)) .call-tile-full .lk-participant-metadata { bottom: calc(7.5rem + env(safe-area-inset-bottom)); }
 }
 .glass-strong {
   background: rgba(30, 30, 34, 0.78);

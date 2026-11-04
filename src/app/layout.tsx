@@ -3,7 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { env } from "@/env";
 import "./globals.css";
 import { PwaSetup } from "@/components/install-app";
-import { SPLASH_SCRIPT, Splash } from "@/components/splash";
+import { Splash } from "@/components/splash";
+import { HEAD_SCRIPT } from "@/lib/head-scripts";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,6 +18,7 @@ const geistMono = Geist_Mono({
 
 const description =
   "Hosting calls anonymously, now made easy. Pick any name, disguise your voice, and always know who joins.";
+
 
 export const viewport: Viewport = {
   themeColor: "#0b0b0f",
@@ -42,7 +44,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: SPLASH_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: HEAD_SCRIPT }} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

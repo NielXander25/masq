@@ -39,7 +39,7 @@ export function RoundButton({
       aria-pressed={pressed}
       onClick={onClick}
       disabled={disabled}
-      className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full backdrop-blur-xl transition active:scale-95 disabled:opacity-40 min-[400px]:h-12 min-[400px]:w-12 sm:h-14 sm:w-14 ${tones[tone]} ${className}`}
+      className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full backdrop-blur-xl transition active:scale-95 disabled:opacity-40 wide:h-12 wide:w-12 sm:h-14 sm:w-14 ${tones[tone]} ${className}`}
     >
       {children}
       {badge ? (

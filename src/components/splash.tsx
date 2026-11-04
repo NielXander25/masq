@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { LogoMark } from "@/components/logo";
 
-const SEEN = "masqq.splash";
+import { SPLASH_SEEN_KEY as SEEN } from "@/lib/head-scripts";
 const MIN_MS = 1400;
 const MAX_MS = 3000;
 
@@ -59,6 +59,3 @@ export function Splash() {
     </div>
   );
 }
-
-/** Before first paint: skip the splash if it already showed this launch. */
-export const SPLASH_SCRIPT = `try{if(sessionStorage.getItem("${SEEN}"))document.documentElement.classList.add("no-splash")}catch(e){}`;

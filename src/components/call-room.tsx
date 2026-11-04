@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/icons";
 import { Avatar, RoundButton, Sheet } from "@/components/ui/primitives";
 import { baseName, hostDisplayName } from "@/lib/alias";
+import { isPhoneWidth } from "@/lib/viewport";
 import type { VoicePreset } from "@/lib/voice/presets";
 import { useMicStore } from "@/lib/voice/store";
 
@@ -311,7 +312,7 @@ function InCall({
       {/* Floating glass dock */}
       <div className="absolute inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex flex-col items-center gap-2.5 px-2">
         {trayOpen && <ReactionTray onPick={reactions.react} />}
-        <div className="glass flex items-center gap-1.5 rounded-[34px] p-2 min-[400px]:gap-2 sm:gap-3 sm:p-2.5">
+        <div className="glass flex items-center gap-1.5 rounded-[34px] p-2 wide:gap-2 sm:gap-3 sm:p-2.5">
           <MicButton disguise={voiceOn} callId={callId} />
           {!isHost && !cameraRequired && (
             <RoundButton
@@ -354,7 +355,7 @@ function InCall({
             onClick={() => (isHost ? setSheet("end") : room.disconnect())}
             aria-label={isHost ? "Hang up" : "Leave call"}
             title={isHost ? "Hang up" : "Leave call"}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ff3b30] text-white shadow-[0_6px_20px_rgba(255,59,48,0.45)] transition active:scale-95 min-[400px]:h-12 min-[400px]:w-12 sm:h-14 sm:w-14"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ff3b30] text-white shadow-[0_6px_20px_rgba(255,59,48,0.45)] transition active:scale-95 wide:h-12 wide:w-12 sm:h-14 sm:w-14"
           >
             <PhoneOffIcon />
           </button>
@@ -646,7 +647,7 @@ function useSimpleView({ busy }: { busy: boolean }) {
   useEffect(() => {
     if (on || optedOut || video || busy) return;
     const timer = setInterval(() => {
-      const phone = window.matchMedia("(max-width: 767px)").matches;
+      const phone = isPhoneWidth();
       if (phone && Date.now() - lastActive.current > IDLE_MS) {
         setOn(true);
         setAuto(true);

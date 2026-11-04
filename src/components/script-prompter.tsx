@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CloseIcon, PencilIcon, PlayIcon } from "@/components/ui/icons";
+import { pageZoom, viewHeight } from "@/lib/viewport";
 
 /**
  * A private teleprompter. The script lives only in this tab's memory: it is
@@ -67,27 +68,28 @@ export function ScriptOverlay({ script, onEdit }: { script: Script; onEdit: () =
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(30); // pixels per second
   const [size, setSize] = useState(22);
-  const [height, setHeight] = useState(() => clampHeight(typeof window === "undefined" ? 320 : window.innerHeight * 0.42));
+  const [height, setHeight] = useState(() => clampHeight(typeof window === "undefined" ? 320 : viewHeight() * 0.42));
 
   const drag = useRef<{ y: number; h: number; moved: boolean } | null>(null);
   const resize = {
     onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
       e.currentTarget.setPointerCapture(e.pointerId);
-      drag.current = { y: e.clientY, h: height, moved: false };
+      drag.current = { y: e.clientY / pageZoom(), h: height, moved: false };
     },
     onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
       const d = drag.current;
       if (!d) return;
-      if (Math.abs(e.clientY - d.y) > 4) d.moved = true;
-      if (d.moved) setHeight(clampHeight(d.h + e.clientY - d.y));
+      const y = e.clientY / pageZoom();
+      if (Math.abs(y - d.y) > 4) d.moved = true;
+      if (d.moved) setHeight(clampHeight(d.h + y - d.y));
     },
     onPointerUp() {
       const d = drag.current;
       drag.current = null;
       // A tap (no drag) toggles between a small card and a tall one.
       if (d && !d.moved) {
-        const tall = clampHeight(window.innerHeight * 0.7);
-        setHeight(d.h >= tall - 20 ? clampHeight(window.innerHeight * 0.42) : tall);
+        const tall = clampHeight(viewHeight() * 0.7);
+        setHeight(d.h >= tall - 20 ? clampHeight(viewHeight() * 0.42) : tall);
       }
     },
     onPointerCancel() {
@@ -195,6 +197,6 @@ export function ScriptOverlay({ script, onEdit }: { script: Script; onEdit: () =
 
 /** The card can grow from a strip to most of the screen, leaving the dock clear. */
 function clampHeight(h: number) {
-  const max = typeof window === "undefined" ? 600 : window.innerHeight - 72 - 120;
+  const max = typeof window === "undefined" ? 600 : viewHeight() - 72 - 120;
   return Math.max(140, Math.min(max, h));
 }
