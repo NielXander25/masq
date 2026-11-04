@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { env } from "@/env";
 import "./globals.css";
 import { PwaSetup } from "@/components/install-app";
+import { SPLASH_SCRIPT, Splash } from "@/components/splash";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,10 +40,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SPLASH_SCRIPT }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Splash />
         {children}
         <PwaSetup />
       </body>
