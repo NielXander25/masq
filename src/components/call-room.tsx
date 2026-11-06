@@ -66,7 +66,10 @@ type Props = {
   /** Guest only: the host requires cameras on. */
   cameraRequired?: boolean;
 };
-type Phase = "prejoin" | "connecting" | "in-call" | "left" | "removed" | "ended" | "error";
+// A constant, so the room isn't recreated on re-render.
+const ROOM_OPTIONS = { adaptiveStream: true, dynacast: true } as const;
+
+type Phase = "prejoin" | "connecting" | "in-call" | "left" | "removed" | "lost" | "ended" | "error";
 
 export function CallRoom({
   callId,
@@ -132,6 +135,17 @@ export function CallRoom({
       return;
     }
     if (reason === DisconnectReason.PARTICIPANT_REMOVED) return setPhase(isHost ? "left" : "removed");
+    // Anything else (network gave up, the call ended while reconnecting, the
+    // same account joined elsewhere): ask the server what happened instead of
+    // leaving a frozen call on screen.
+    void fetch(`/api/calls/${callId}/me`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((me: { status: string; callStatus: string } | null) => {
+        if (me?.callStatus === "ENDED") return setPhase("ended");
+        if (me?.status === "DENIED") return setPhase(isHost ? "left" : "removed");
+        setPhase("lost");
+      })
+      .catch(() => setPhase("lost"));
   }
 
   if (phase === "prejoin") {
@@ -169,6 +183,21 @@ export function CallRoom({
     );
   }
   if (phase === "removed") return <StatusCard icon={<EmojiIcon>🚪</EmojiIcon>} title="The host removed you from the call" />;
+  if (phase === "lost") {
+    return (
+      <StatusCard icon={<EmojiIcon>📶</EmojiIcon>} title="Connection lost" subtitle="Check your internet, then rejoin.">
+        <button
+          onClick={() => {
+            setConn(null);
+            setPhase("connecting");
+          }}
+          className="rounded-full bg-white px-6 py-2.5 text-[15px] font-semibold text-black transition active:scale-[0.98]"
+        >
+          Rejoin
+        </button>
+      </StatusCard>
+    );
+  }
   if (phase === "error") return <Message title={error ?? "Something went wrong."} />;
   if (!conn) return <Message title="Connecting…" spinner />;
 
@@ -186,6 +215,10 @@ export function CallRoom({
       video={!isHost && cameraOn}
       // The host's media only ever goes through TURN, so guests never see their IP.
       connectOptions={isHost ? { rtcConfig: { iceTransportPolicy: "relay" } } : undefined}
+      // Big calls on phones: only receive video that is on screen, at the size
+      // it's shown (adaptiveStream), and only send the qualities someone is
+      // watching (dynacast). Saves data, battery and CPU with many people.
+      options={ROOM_OPTIONS}
       onDisconnected={onDisconnected}
       onError={(e) => {
         setError(e.message);
@@ -288,6 +321,7 @@ function InCall({
           hands={hands}
           onReact={reactions.react}
           onMessages={() => setSheet("chat")}
+          onPeople={isHost ? () => setSheet("people") : undefined}
           onHangUp={() => (isHost ? setSheet("end") : room.disconnect())}
           onExit={simple.exit}
         />

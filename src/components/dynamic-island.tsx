@@ -93,7 +93,14 @@ export function DynamicIsland({
                   </button>
                 </div>
                 {lobby.waiting.length > 1 && (
-                  <p className="mt-2 text-center text-xs text-neutral-400">+{lobby.waiting.length - 1} more waiting</p>
+                  <button
+                    type="button"
+                    disabled={lobby.busy !== null}
+                    onClick={lobby.admitAll}
+                    className="mt-2 w-full rounded-full bg-white/10 py-2 text-sm font-semibold text-[#30d158] disabled:opacity-50"
+                  >
+                    {lobby.busy === "all" ? "Letting everyone in…" : `Admit all ${lobby.waiting.length} waiting`}
+                  </button>
                 )}
               </>
             ) : reconnecting ? (

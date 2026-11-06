@@ -23,6 +23,7 @@ export function SimpleView({
   hands,
   onReact,
   onMessages,
+  onPeople,
   onHangUp,
   onExit,
 }: {
@@ -33,6 +34,8 @@ export function SimpleView({
   hands: Hands;
   onReact: (emoji: (typeof REACTIONS)[number]) => void;
   onMessages: () => void;
+  /** Host only: open People (to see and lower raised hands). */
+  onPeople?: () => void;
   onHangUp: () => void;
   onExit: () => void;
 }) {
@@ -66,6 +69,20 @@ export function SimpleView({
           {recording && <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" aria-label="Recording" />}
           {participants.length} {participants.length === 1 ? "person" : "people"}
         </p>
+        {hands.hands.length > 0 && (
+          <button
+            type="button"
+            onClick={onPeople}
+            disabled={!onPeople}
+            className="hand-pop mt-3 flex max-w-full items-center gap-2 rounded-full bg-[#ffd60a] px-4 py-2 text-[15px] font-semibold text-black"
+          >
+            <span>✋</span>
+            <span className="truncate">
+              {hands.hands[0]!.isLocal ? "You" : hands.hands[0]!.name}
+              {hands.hands.length > 1 ? ` +${hands.hands.length - 1}` : ""} raised {hands.hands.length > 1 ? "hands" : "a hand"}
+            </span>
+          </button>
+        )}
 
         {speaker && (
           <div className="mt-6 flex flex-col items-center">

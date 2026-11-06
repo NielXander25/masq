@@ -94,7 +94,16 @@ export async function startTrackRecording(
   try {
     info = await start();
   } catch (e) {
-    if (!isEgressLimit(e) || !(await freeSlotByStoppingMix(call.id))) throw e;
+    if (!isEgressLimit(e)) throw e;
+    // In a bigger call the full mix is worth more than one more speaker's
+    // track: once a couple of speakers are already recorded, keep the mix.
+    const tracks = await db.recording.count({
+      where: { callId: call.id, kind: "TRACK", status: { in: ["PENDING", "PROCESSING"] } },
+    });
+    if (tracks >= 2 || !(await freeSlotByStoppingMix(call.id))) {
+      console.warn("Egress limit reached: kept the room recording, skipped a speaker track", call.id);
+      return;
+    }
     console.warn("Egress limit reached: stopped the room mix to record a speaker", call.id);
     // The stopped session can take a moment to release.
     for (let attempt = 0; ; attempt++) {

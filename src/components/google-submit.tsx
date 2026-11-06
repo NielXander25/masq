@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
+import { InAppBrowserNotice } from "@/components/in-app-browser";
 
 function GoogleG({ className }: { className?: string }) {
   return (
@@ -17,17 +18,20 @@ function GoogleG({ className }: { className?: string }) {
 export function GoogleSubmit() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="relative flex h-14 w-full items-center justify-center gap-3 rounded-full bg-white text-[17px] font-semibold text-black shadow-[0_10px_40px_-10px_rgba(255,255,255,0.35)] ring-1 ring-white/60 transition active:scale-[0.98] disabled:opacity-80"
-    >
-      {pending ? (
-        <span className="h-5 w-5 animate-spin rounded-full border-2 border-black/20 border-t-black" aria-hidden />
-      ) : (
-        <GoogleG className="h-6 w-6" />
-      )}
-      {pending ? "Opening Google…" : "Continue with Google"}
-    </button>
+    <>
+      <InAppBrowserNotice />
+      <button
+        type="submit"
+        disabled={pending}
+        className="relative flex h-14 w-full items-center justify-center gap-3 rounded-full bg-white text-[17px] font-semibold text-black shadow-[0_10px_40px_-10px_rgba(255,255,255,0.35)] ring-1 ring-white/60 transition active:scale-[0.98] disabled:opacity-80"
+      >
+        {pending ? (
+          <span className="h-5 w-5 animate-spin rounded-full border-2 border-black/20 border-t-black" aria-hidden />
+        ) : (
+          <GoogleG className="h-6 w-6" />
+        )}
+        {pending ? "Opening Google…" : "Continue with Google"}
+      </button>
+    </>
   );
 }

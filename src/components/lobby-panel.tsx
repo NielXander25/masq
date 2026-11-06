@@ -64,7 +64,39 @@ export function useLobby(callId: string, enabled: boolean) {
     [callId, load],
   );
 
+  /** Let everyone waiting in, one after another (the server still checks each). */
+  const admitAll = useCallback(async () => {
+    const ids = guests.filter((g) => g.status === "PENDING").map((g) => g.id);
+    setBusy("all");
+    setError(null);
+    try {
+      for (const id of ids) {
+        const res = await fetch(`/api/calls/${callId}/participants/${id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "admit" }),
+        });
+        if (!res.ok && res.status !== 409) {
+          setError((await res.json().catch(() => ({}))).error ?? "Something went wrong");
+          break;
+        }
+        if (res.status === 409) {
+          const msg = (await res.json().catch(() => ({}))).error as string | undefined;
+          // "No longer waiting" is fine (they left); a plan limit stops here.
+          if (msg && !/no longer waiting/i.test(msg)) {
+            setError(msg);
+            break;
+          }
+        }
+      }
+      await load();
+    } finally {
+      setBusy(null);
+    }
+  }, [callId, guests, load]);
+
   return {
+    admitAll,
     waiting: guests.filter((g) => g.status === "PENDING"),
     inCall: guests.filter((g) => g.status === "ADMITTED"),
     limit,
@@ -91,6 +123,16 @@ export function LobbyPanel({ lobby }: { lobby: Lobby }) {
           <p className="mt-1 text-xs text-neutral-500">Free plan: up to {lobby.limit - 1} guest at a time.</p>
         )}
         {lobby.error && <p className="mt-2 rounded bg-red-950 px-2 py-1 text-sm text-red-300">{lobby.error}</p>}
+        {lobby.waiting.length > 1 && (
+          <button
+            type="button"
+            disabled={lobby.busy !== null}
+            onClick={lobby.admitAll}
+            className="mt-2 w-full rounded-full bg-[#30d158] py-2.5 text-sm font-semibold text-black disabled:opacity-50"
+          >
+            {lobby.busy === "all" ? "Letting everyone in…" : `Admit all ${lobby.waiting.length}`}
+          </button>
+        )}
         {lobby.waiting.length === 0 ? (
           <p className="mt-2 text-sm text-neutral-500">Nobody is waiting.</p>
         ) : (
