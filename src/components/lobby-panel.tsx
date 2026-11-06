@@ -170,16 +170,37 @@ export function LobbyPanel({ lobby }: { lobby: Lobby }) {
 function InCallList({ lobby }: { lobby: Lobby }) {
   const remotes = useRemoteParticipants();
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [muting, setMuting] = useState(false);
+  const micOnFor = (identity: string) =>
+    remotes.find((p) => p.identity === identity)?.getTrackPublication(Track.Source.Microphone)?.isMuted === false;
+  const unmuted = lobby.inCall.filter((g) => micOnFor(g.identity));
   return (
     <section>
       <h3 className="text-sm font-medium text-neutral-300">In the call</h3>
+      {unmuted.length > 1 && (
+        <button
+          type="button"
+          disabled={muting}
+          onClick={async () => {
+            setMuting(true);
+            try {
+              await Promise.all(unmuted.map((g) => lobby.decide(g.id, "mute")));
+            } finally {
+              setMuting(false);
+            }
+          }}
+          className="mt-2 w-full rounded-full bg-white/10 py-2.5 text-sm font-semibold disabled:opacity-50"
+        >
+          {muting ? "Muting…" : `Mute everyone (${unmuted.length})`}
+        </button>
+      )}
       {lobby.inCall.length === 0 ? (
         <p className="mt-2 text-sm text-neutral-500">No guests yet.</p>
       ) : (
         <ul className="mt-2 space-y-2">
           {lobby.inCall.map((g) => {
             const live = remotes.find((p) => p.identity === g.identity);
-            const micOn = Boolean(live?.getTrackPublication(Track.Source.Microphone)?.isMuted === false);
+            const micOn = micOnFor(g.identity);
             const name = g.name ?? g.email;
             return (
               <li key={g.id} className="rounded-2xl bg-white/[0.06] p-3">

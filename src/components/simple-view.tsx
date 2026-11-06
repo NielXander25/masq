@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { toggleMic } from "@/components/mic-controls";
 import { ReactionTray, type REACTIONS } from "@/components/reactions";
 import type { Hands } from "@/components/hands";
-import { ChatIcon, CloseIcon, HandIcon, MicIcon, MicOffIcon, PhoneOffIcon, SmileIcon } from "@/components/ui/icons";
+import { ChatIcon, CloseIcon, HandIcon, MicIcon, MicOffIcon, PeopleIcon, PhoneOffIcon, SmileIcon } from "@/components/ui/icons";
 import { Avatar } from "@/components/ui/primitives";
 import { baseName } from "@/lib/alias";
 
@@ -114,7 +114,18 @@ export function SimpleView({
           {muted ? <MicOffIcon className="h-8 w-8" /> : <MicIcon className="h-8 w-8" />}
           {muted ? "Unmute" : "Mute"}
         </button>
-        <div className="grid grid-cols-3 gap-3">
+        <div className={`grid gap-3 ${onPeople ? "grid-cols-4" : "grid-cols-3"}`}>
+          {onPeople && (
+            <button
+              type="button"
+              onClick={onPeople}
+              aria-label="People"
+              className="morph flex h-28 flex-col items-center justify-center gap-1.5 rounded-[48px] bg-white/[0.12] text-[15px] font-semibold"
+            >
+              <PeopleIcon className="h-7 w-7" />
+              People
+            </button>
+          )}
           <button
             type="button"
             onClick={hands.toggle}
